@@ -7,11 +7,15 @@ import os
 import shutil
 import math
 import requests
+import zipfile
+import datetime
 
 from pathlib import Path
 from random import randint, choice
 from os.path import join
 from sklearn.metrics import confusion_matrix
+
+import tensorflow as tf
 
 
 def download_a_image(url):
@@ -186,3 +190,29 @@ def print_confusion_matrix(y_test, y_pred, class_names, figsize=(10, 7), fontsiz
     plt.title(title)
     plt.show()
 
+def unzip_data(filename, unzip_dir=None):
+  """
+  Unzips filename into the current working / given directory.
+
+  Args:
+    filename (str): a filepath to a target zip folder to be unzipped.
+  """
+  zip_ref = zipfile.ZipFile(filename, "r")
+  zip_ref.extractall(unzip_dir)
+  zip_ref.close()
+
+def create_tensorboard_callback(dir_name, experiment_name):
+    """
+    Creates a TensorBoard callback instand to store log files.
+
+    Stores log files with the filepath:
+        "dir_name/experiment_name/current_datetime/"
+
+    Args:
+        dir_name: target directory to store TensorBoard log files
+        experiment_name: name of experiment directory (e.g. efficientnet_model_1)
+    """
+    log_dir = join(dir_name, experiment_name, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
+    print(f"Saving TensorBoard log files to: {log_dir}")
+    return tensorboard_callback
