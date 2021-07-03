@@ -30,7 +30,7 @@ def get_class_percent(pred, classes):
     class_int = np.argmax(pred)
     return classes[class_int], pred[class_int] * 100
 
-def plot_images(imgs, labels=None, col=5, classes=None, figsize=(10, 6), show_shape=False, gray=False, single_plot_size=None):
+def plot_images(imgs, labels=None, col=5, classes=None, figsize=(10, 6), show_shape=False, from_links=False, from_dirs=False, gray=False, single_plot_size=None):
     '''
     Plotting images using matplolib
 
@@ -51,6 +51,10 @@ def plot_images(imgs, labels=None, col=5, classes=None, figsize=(10, 6), show_sh
         figsize = (single_plot_size[0]*col, single_plot_size[1]*row)
     plt.figure(figsize=figsize)
     for c, img in enumerate(imgs):
+        if from_dirs:
+            img = image_to_numpy(img)
+        elif from_links:
+            img = download_a_image(img)
         plt.subplot(row, col, c+1)
         plt.imshow(img)
         plt.axis(False)
@@ -65,7 +69,7 @@ def plot_images(imgs, labels=None, col=5, classes=None, figsize=(10, 6), show_sh
             plt.title(title)
     plt.show()
 
-def plot_image(img, label=None, classes=None, figsize=(6, 6), show_shape=False, gray=False):
+def plot_image(img, label=None, classes=None, figsize=(6, 6), show_shape=False, from_link=False, from_dir=False, gray=False):
     '''
     Plotting an image using matplolib
 
@@ -78,7 +82,7 @@ def plot_image(img, label=None, classes=None, figsize=(6, 6), show_shape=False, 
         show_shape : define if the shape will be shown in title (default : False)
         gray : set True to set gray colormap
     '''
-    plot_images(np.expand_dims(img, 0), labels=None if label == None else [label], col=1, classes=classes, figsize=figsize, show_shape=show_shape, gray=gray)
+    plot_images(np.expand_dims(img, 0), labels=None if label == None else [label], col=1, classes=classes, figsize=figsize, show_shape=show_shape, from_links=from_link, from_dirs=from_dir, gray=gray)
 
 def plot_pred_images(model, imgs, labels=None, col=5, figsize=(10, 6), classes=None, rescale=None, IMAGE_SHAPE=None, from_links=False, from_dirs=False, gray=False, single_plot_size=None):
     if gray:
@@ -115,17 +119,21 @@ def plot_history(history, val=True, togather_all=False, figsize=(10, 6), accurac
     if togather_all:
         history.plot(xlabel='Epochs')
     else:
-        loss = ['loss']
-        acc = [accuracy]
-        if val:
-            loss.append('val_loss')
-            acc.append(f'val_{accuracy}')
-        
         plt.figure(figsize=figsize)
         plt.subplot(1, 2, 1)
-        history[loss].plot(xlabel='Epochs', y_label='Loss')
+        plt.plot(history['loss'], label='loss')
+        if val:
+            plt.plot(history['val_loss'], label='val_loss')
+        plt.xlabel('epoch')
+        plt.legend()
+
         plt.subplot(1, 2, 2)
-        history[acc].plot(xlabel='Epochs', y_label=accuracy.title())
+        plt.plot(history[accuracy], label=accuracy)
+        if val:
+            plt.plot(history[f'val_{accuracy}'], label=f'val_{accuracy}')
+        plt.xlabel('epoch')
+        plt.legend()
+        plt.show()
 
 def create_train_val_test(root_data_dir, val_ratio=0.1, test_ratio=0, output_dir=None, class_labels=None):
     # class labels
