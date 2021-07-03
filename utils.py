@@ -99,7 +99,7 @@ def plot_pred_images(model, imgs, labels=None, col=5, figsize=(10, 6), classes=N
         if IMAGE_SHAPE:
             img = cv2.resize(img, IMAGE_SHAPE)
         if rescale:
-            img *= rescale
+            img = img * rescale
         class_name, percent = get_class_percent(model.predict(np.expand_dims(img, axis=0)), classes)
         title = f'{round(percent, 2)}% {class_name}'
         if labels is not None:
