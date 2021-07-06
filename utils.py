@@ -11,12 +11,51 @@ import zipfile
 import datetime
 
 from pathlib import Path
-from random import randint, choice
-from os.path import join
+from random import randint, choices
+from os.path import join, isdir, isfile
 from sklearn.metrics import confusion_matrix
 
 import tensorflow as tf
 
+def get_random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, classes=None, return_labels=True):
+    data_dir = str(data_dir)
+    class_names = [class_name for class_name in os.listdir(data_dir) if isdir(join(data_dir, class_name))]
+
+    if classes:
+        for class_name in classes:
+            if class_name not in class_names:
+                raise ValueError(f'"{class_name}" not found in "{data_dir}""')
+    else:
+        classes = class_names
+
+    if equal_img_per_class:
+        rand_list = {class_name : equal_img_per_class for class_name in classes}
+    else:
+        rand_list = {class_name : 0 for class_name in classes}
+        for class_name in choices(classes, k=rand_imgs):
+            rand_list[class_name] += 1
+
+    rand = []
+    labels = []
+    for class_name, rand_img_num in rand_list.items():
+        if rand_img_num:
+            class_dir = join(data_dir, class_name)
+            rand_images = choices([fl for fl in os.listdir(class_dir) if isfile(join(class_dir, fl))],
+                                  k=rand_img_num)
+            for i in rand_images:
+                rand.append(join(data_dir, class_name, i))
+                if return_labels:
+                    labels.append(class_name)
+
+    return (rand, labels) if return_labels else rand
+
+def print_class_files(data_dir, print_full=False):
+    data_dir = str(data_dir)
+    for i in os.listdir(data_dir):
+        class_dir = join(data_dir, i)
+        if isdir(class_dir):
+            c = len([fl for fl in os.listdir(class_dir) if isfile(join(class_dir, fl))])
+            print(f'Found {c} {class_dir if print_full else i}')
 
 def download_a_image(url):
     fl_name = url.split('/')[-1]
