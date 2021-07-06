@@ -84,7 +84,7 @@ def get_class_percent(pred, classes):
     class_int = np.argmax(pred)
     return classes[class_int], pred[class_int] * 100
 
-def plot_images(imgs, labels=None, col=5, classes=None, figsize=(10, 6), show_shape=False, from_links=False, from_dirs=False, gray=False, single_plot_size=None):
+def plot_images(imgs, labels=None, col=5, classes=None, single_figsize=(5, 5), show_shape=False, from_links=False, from_dirs=False, gray=False):
     '''
     Plotting images using matplolib
 
@@ -93,17 +93,14 @@ def plot_images(imgs, labels=None, col=5, classes=None, figsize=(10, 6), show_sh
         labels : labels for the images (Optional)
         col  : column number (default : 5)
         classes : All classes for the images (default : None)
-        figsize : Figure size (default : (10, 6))
+        single_figsize : plot size for each img
         show_shape : define if the shape will be shown in title (default : False)
         gray : set True to set gray colormap
-        single_plot_size : if given, figsize will be calculated using this
     '''
     if gray:
         plt.gray()
     row = math.ceil(len(imgs) / col)
-    if single_plot_size:
-        figsize = (single_plot_size[0]*col, single_plot_size[1]*row)
-    plt.figure(figsize=figsize)
+    plt.figure(figsize=(single_figsize[0]*col, single_figsize[1]*row))
     for c, img in enumerate(imgs):
         if from_dirs:
             img = image_to_numpy(img)
@@ -136,15 +133,13 @@ def plot_image(img, label=None, classes=None, figsize=(6, 6), show_shape=False, 
         show_shape : define if the shape will be shown in title (default : False)
         gray : set True to set gray colormap
     '''
-    plot_images(np.expand_dims(img, 0), labels=None if label == None else [label], col=1, classes=classes, figsize=figsize, show_shape=show_shape, from_links=from_link, from_dirs=from_dir, gray=gray)
+    plot_images(np.expand_dims(img, 0), labels=None if label == None else [label], col=1, classes=classes, single_figsize=figsize, show_shape=show_shape, from_links=from_link, from_dirs=from_dir, gray=gray)
 
-def plot_pred_images(model, imgs, labels=None, col=5, figsize=(10, 6), classes=None, rescale=None, IMAGE_SHAPE=None, from_links=False, from_dirs=False, gray=False, single_plot_size=None):
+def plot_pred_images(model, imgs, labels=None, col=5, single_figsize=(5, 5), classes=None, rescale=None, IMAGE_SHAPE=None, from_links=False, from_dirs=False, gray=False):
     if gray:
         plt.gray()
     row = math.ceil(len(imgs) / col)
-    if single_plot_size:
-        figsize = (single_plot_size[0]*col, single_plot_size[1]*row)
-    plt.figure(figsize=figsize)
+    plt.figure(figsize=(single_figsize[0]*col, single_figsize[1]*row))
     for c, img in enumerate(imgs):
         if from_dirs:
             img = image_to_numpy(img)
@@ -166,28 +161,35 @@ def plot_pred_images(model, imgs, labels=None, col=5, figsize=(10, 6), classes=N
     plt.show()
 
 def plot_pred_image(model, img, label=None, figsize=(6, 6), classes=None, rescale=None, IMAGE_SHAPE=None, from_link=False, from_dir=False, gray=False):
-    plot_pred_images(model, np.expand_dims(img, 0), labels=None if label == None else [label], col=1, figsize=figsize, classes=classes, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, from_links=from_link, from_dirs=from_dir, gray=gray, single_plot_size=None)
+    plot_pred_images(model, np.expand_dims(img, 0), labels=None if label == None else [label], col=1, single_figsize=figsize, classes=classes, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, from_links=from_link, from_dirs=from_dir, gray=gray)
 
-def plot_history(history, val=True, togather_all=False, figsize=(10, 6), accuracy='accuracy'):
+def plot_history(history, single_figsize=(6, 4), val=True, keys=None):
     history = pd.DataFrame(history.history)
-    if togather_all:
-        history.plot(xlabel='Epochs')
-    else:
-        plt.figure(figsize=figsize)
-        plt.subplot(1, 2, 1)
-        plt.plot(history['loss'], label='loss')
-        if val:
-            plt.plot(history['val_loss'], label='val_loss')
-        plt.xlabel('epoch')
-        plt.legend()
+    all_keys = list(history.columns)
 
-        plt.subplot(1, 2, 2)
-        plt.plot(history[accuracy], label=accuracy)
-        if val:
-            plt.plot(history[f'val_{accuracy}'], label=f'val_{accuracy}')
+    if keys:
+        for key in keys:
+            if key not in all_keys:
+                raise ValueError(f'"{key}" not found in the history keys')
+        all_keys = keys
+    
+    true_keys = [i for i in all_keys if not i.startswith('val_')]
+    true_plus_val_keys = true_keys + ['val_' + i for i in true_keys if 'val_' + i in all_keys]
+    plot_key = true_keys + list(set(all_keys) - set(true_plus_val_keys))
+
+    col = 3 if len(plot_key) >= 3 else len(plot_key)
+    row = math.ceil(len(plot_key) / col)
+    figsize = (single_figsize[0]*col, single_figsize[1]*row)
+    plt.figure(figsize=figsize)
+
+    for c, key in enumerate(plot_key):
+        plt.subplot(row, col, c+1)
+        plt.plot(history[key], label=key)
+        if 'val_' + key in all_keys:
+            plt.plot(history['val_' + key], label='val_' + key)
         plt.xlabel('epoch')
         plt.legend()
-        plt.show()
+    plt.show()
 
 def create_train_val_test(root_data_dir, val_ratio=0.1, test_ratio=0, output_dir=None, class_labels=None):
     # class labels
