@@ -17,6 +17,17 @@ from sklearn.metrics import confusion_matrix
 
 import tensorflow as tf
 
+def categorical_to_int(labels, axis=1):
+    '''
+    return labels in int mode from categorical mode
+
+    Parameters:
+    -----------
+        labels : labels in categorical mode
+        axis : if labels are in 2D set axis=1 or if labels are in 1D set axis=0
+    '''
+    return np.argmax(labels, axis=axis)
+
 def get_random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, classes=None, return_labels=True):
     data_dir = str(data_dir)
     class_names = [class_name for class_name in os.listdir(data_dir) if isdir(join(data_dir, class_name))]
