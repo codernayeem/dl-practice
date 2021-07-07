@@ -105,10 +105,11 @@ def plot_images(imgs, labels=None, col=5, classes=None, label_mode='int', single
         show_boundary : show axis without ticks
         label_mode : 'int' or 'categorical'
     '''
-    if label_mode == 'categorical':
-        labels = categorical_to_int(labels)
-    elif label_mode != 'int':
-        raise ValueError('label_mode shoud be "int" or "categorical"')
+    if labels:
+        if label_mode == 'categorical':
+            labels = categorical_to_int(labels)
+        elif label_mode != 'int':
+            raise ValueError('label_mode shoud be "int" or "categorical"')
     row, col, figsize = get_row_col_figsize(len(imgs), col, single_figsize)
     plt.figure(figsize=figsize)
     for c, img in enumerate(imgs):
@@ -152,12 +153,13 @@ def plot_image(img, label=None, classes=None, label_mode='int', figsize=(6, 6), 
     plot_images(np.expand_dims(img, 0), labels=None if label == None else [label], col=1, classes=classes, label_mode=label_mode, single_figsize=figsize, show_shape=show_shape, from_link=from_link, from_dir=from_dir, cmap=cmap, show_boundary=show_boundary)
 
 def plot_pred_images(model, imgs, labels=None, col=5, label_mode='int', classes=None, single_figsize=(5, 5), rescale=None, IMAGE_SHAPE=None, from_link=False, from_dir=False, cmap=None, show_boundary=False):
-    if label_mode == 'categorical':
-        labels = categorical_to_int(labels)
-    elif label_mode != 'int':
-        raise ValueError('label_mode shoud be "int" or "categorical"')
+    if labels:
+        if label_mode == 'categorical':
+            labels = categorical_to_int(labels)
+        elif label_mode != 'int':
+            raise ValueError('label_mode shoud be "int" or "categorical"')
     row, col, figsize = get_row_col_figsize(len(imgs), col, single_figsize)
-    plt.figure(figsize)
+    plt.figure(figsize=figsize)
     for c, img in enumerate(imgs):
         if from_dir:
             img = image_to_numpy(img)
