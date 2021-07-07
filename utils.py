@@ -19,7 +19,8 @@ import tensorflow as tf
 
 
 def empty(n):
-    return True if n == None or np.array(n).size == 0 or not n else False
+    n = np.array(n)
+    return (n == np.array(None)).all() or n.size == 0
 
 def mount_gdrive():
     '''
