@@ -212,9 +212,9 @@ def plot_pred_images(model, imgs, labels=None, col=5, label_mode='int', classes=
 def plot_pred_image(model, img, label=None, label_mode='int', classes=None, figsize=(6, 6), rescale=None, IMAGE_SHAPE=None, from_link=False, from_dir=False, cmap=None, show_boundary=False):
     plot_pred_images(model, np.expand_dims(img, 0), labels=None if label == None else [label], col=1, label_mode=label_mode, classes=classes, single_figsize=figsize, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, from_link=from_link, from_dir=from_dir, cmap=cmap, show_boundary=show_boundary)
 
-def plot_history(history, single_figsize=(6, 4), val=True, keys=None):
-    history = pd.DataFrame(history.history)
-    all_keys = list(history.columns)
+def plot_history(history, col=3, single_figsize=(6, 4), keys=None):
+    history = history.history
+    all_keys = history.keys()
 
     if keys:
         for key in keys:
@@ -226,14 +226,49 @@ def plot_history(history, single_figsize=(6, 4), val=True, keys=None):
     true_plus_val_keys = true_keys + ['val_' + i for i in true_keys if 'val_' + i in all_keys]
     plot_key = true_keys + list(set(all_keys) - set(true_plus_val_keys))
 
-    row, col, figsize = get_row_col_figsize(len(plot_key), col=3, single_figsize=single_figsize)
+    total_epochs = range(1, len(history[plot_key[0]])+1)
+
+    row, col, figsize = get_row_col_figsize(len(plot_key), col=col, single_figsize=single_figsize)
     plt.figure(figsize=figsize)
 
     for c, key in enumerate(plot_key):
         plt.subplot(row, col, c+1)
-        plt.plot(history[key], label=key)
+        plt.plot(total_epochs, history[key], label=key)
         if 'val_' + key in all_keys:
-            plt.plot(history['val_' + key], label='val_' + key)
+            plt.plot(total_epochs, history['val_' + key], label='val_' + key)
+        plt.xlabel('epoch')
+        plt.legend()
+    plt.show()
+
+def compare_histories(old, new, initial_epochs, single_figsize=(8, 4), keys=None):
+    """
+    Compares two model history objects.
+    """
+    old, new = old.history, new.history
+    all_keys = old.keys()
+    
+    if keys:
+        for key in keys:
+            if key not in all_keys:
+                raise ValueError(f'"{key}" not found in the history keys')
+        all_keys = keys
+    
+    true_keys = [i for i in all_keys if not i.startswith('val_')]
+    true_plus_val_keys = true_keys + ['val_' + i for i in true_keys if 'val_' + i in all_keys]
+    plot_key = true_keys + list(set(all_keys) - set(true_plus_val_keys))
+
+    total_epochs = len(old[plot_key[0]]) + len(new[plot_key[0]])
+    total_epochs = range(1, total_epochs+1)
+
+    row, col, figsize = get_row_col_figsize(len(plot_key), col=1, single_figsize=single_figsize)
+    plt.figure(figsize=figsize)
+
+    for c, key in enumerate(plot_key):
+        plt.subplot(row, col, c+1)
+        plt.plot(total_epochs, old[key] + new[key], label=key)
+        if 'val_' + key in all_keys:
+            plt.plot(total_epochs, old['val_' + key] + new['val_' + key], label='val_' + key)
+        plt.plot([initial_epochs, initial_epochs], plt.ylim())
         plt.xlabel('epoch')
         plt.legend()
     plt.show()
