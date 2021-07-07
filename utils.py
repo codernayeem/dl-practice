@@ -17,6 +17,14 @@ from sklearn.metrics import confusion_matrix
 
 import tensorflow as tf
 
+def mount_gdrive():
+    '''
+    Mount google drive and return drive path '/content/drive/My Drive'
+    '''
+    from google.colab import drive
+    drive.mount('/content/drive')
+    return '/content/drive/My Drive'
+
 def categorical_to_int(labels, axis=1):
     '''
     return labels in int mode from categorical mode
