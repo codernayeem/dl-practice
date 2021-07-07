@@ -17,6 +17,10 @@ from sklearn.metrics import confusion_matrix
 
 import tensorflow as tf
 
+
+def empty(n):
+    return True if n == None or np.array(n).size == 0 or not n else False
+
 def mount_gdrive():
     '''
     Mount google drive and return drive path '/content/drive/My Drive'
@@ -81,11 +85,12 @@ def get_random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, classes=Non
 
 def print_class_files(data_dir, print_full=False):
     data_dir = str(data_dir)
+    print(f'Directory : {data_dir}')
     for i in os.listdir(data_dir):
         class_dir = join(data_dir, i)
         if isdir(class_dir):
             c = len([fl for fl in os.listdir(class_dir) if isfile(join(class_dir, fl))])
-            print(f'Found {c} {class_dir if print_full else i}')
+            print(f'  - Found {c} {class_dir if print_full else i}')
 
 def download_a_image(url):
     fl_name = url.split('/')[-1]
@@ -104,10 +109,10 @@ def image_to_numpy(file_dir, image_size=None):
     img =  cv2.cvtColor(cv2.imread(file_dir), cv2.COLOR_BGR2RGB)
     return img if not image_size else cv2.resize(img, image_size)
 
-def get_class_percent(pred, classes):
+def get_class_percent(pred, classes=None):
     pred = pred.squeeze()
     class_int = np.argmax(pred)
-    return classes[class_int], pred[class_int] * 100
+    return (class_int if empty(classes) else classes[class_int]), pred[class_int] * 100
 
 def get_row_col_figsize(total_item, col, single_figsize):
     col = col if total_item >= col else total_item
@@ -130,7 +135,7 @@ def plot_images(imgs, labels=None, col=5, classes=None, label_mode='int', single
         show_boundary : show axis without ticks
         label_mode : 'int' or 'categorical'
     '''
-    if labels:
+    if not empty(labels):
         if label_mode == 'categorical':
             labels = categorical_to_int(labels)
         elif label_mode != 'int':
@@ -150,10 +155,11 @@ def plot_images(imgs, labels=None, col=5, classes=None, label_mode='int', single
         else:
             plt.axis(False)
         title = ''
-        if labels is not None and classes is not None:
-            title = f'{classes[labels[c]]}'
-        elif labels is not None:
-            title = f'{labels[c]}'
+        if not empty(labels): 
+            if not empty(classes):
+                title = f'{classes[labels[c]]}'
+            else:
+                title = f'{labels[c]}'
         if show_shape:
             title += f' ({img.shape})'
         if title:
@@ -178,7 +184,7 @@ def plot_image(img, label=None, classes=None, label_mode='int', figsize=(6, 6), 
     plot_images(np.expand_dims(img, 0), labels=None if label == None else [label], col=1, classes=classes, label_mode=label_mode, single_figsize=figsize, show_shape=show_shape, from_link=from_link, from_dir=from_dir, cmap=cmap, show_boundary=show_boundary)
 
 def plot_pred_images(model, imgs, labels=None, col=5, label_mode='int', classes=None, single_figsize=(5, 5), rescale=None, IMAGE_SHAPE=None, from_link=False, from_dir=False, cmap=None, show_boundary=False):
-    if labels:
+    if not empty(labels):
         if label_mode == 'categorical':
             labels = categorical_to_int(labels)
         elif label_mode != 'int':
@@ -204,7 +210,7 @@ def plot_pred_images(model, imgs, labels=None, col=5, label_mode='int', classes=
             img = img * rescale
         class_name, percent = get_class_percent(model.predict(np.expand_dims(img, axis=0)), classes)
         title = f'{round(percent, 2)}% {class_name}'
-        if labels is not None:
+        if not empty(labels):
             title += f' ({classes[labels[c]]})'
         plt.title(title)
     plt.show()
@@ -212,11 +218,11 @@ def plot_pred_images(model, imgs, labels=None, col=5, label_mode='int', classes=
 def plot_pred_image(model, img, label=None, label_mode='int', classes=None, figsize=(6, 6), rescale=None, IMAGE_SHAPE=None, from_link=False, from_dir=False, cmap=None, show_boundary=False):
     plot_pred_images(model, np.expand_dims(img, 0), labels=None if label == None else [label], col=1, label_mode=label_mode, classes=classes, single_figsize=figsize, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, from_link=from_link, from_dir=from_dir, cmap=cmap, show_boundary=show_boundary)
 
-def plot_history(history, col=3, single_figsize=(6, 4), keys=None):
+def plot_history(history, col=3, single_figsize=(6, 4), keys=None, start_epoch=1):
     history = history.history
     all_keys = history.keys()
 
-    if keys:
+    if not empty(keys):
         for key in keys:
             if key not in all_keys:
                 raise ValueError(f'"{key}" not found in the history keys')
@@ -226,7 +232,7 @@ def plot_history(history, col=3, single_figsize=(6, 4), keys=None):
     true_plus_val_keys = true_keys + ['val_' + i for i in true_keys if 'val_' + i in all_keys]
     plot_key = true_keys + list(set(all_keys) - set(true_plus_val_keys))
 
-    total_epochs = range(1, len(history[plot_key[0]])+1)
+    total_epochs = range(start_epoch, len(history[plot_key[0]])+start_epoch)
 
     row, col, figsize = get_row_col_figsize(len(plot_key), col=col, single_figsize=single_figsize)
     plt.figure(figsize=figsize)
@@ -240,14 +246,14 @@ def plot_history(history, col=3, single_figsize=(6, 4), keys=None):
         plt.legend()
     plt.show()
 
-def compare_histories(old, new, initial_epochs, single_figsize=(8, 4), keys=None):
+def compare_histories(old, new, initial_epochs, single_figsize=(8, 4), keys=None, start_epoch=1):
     """
     Compares two model history objects.
     """
     old, new = old.history, new.history
     all_keys = old.keys()
     
-    if keys:
+    if not empty(keys):
         for key in keys:
             if key not in all_keys:
                 raise ValueError(f'"{key}" not found in the history keys')
@@ -257,8 +263,7 @@ def compare_histories(old, new, initial_epochs, single_figsize=(8, 4), keys=None
     true_plus_val_keys = true_keys + ['val_' + i for i in true_keys if 'val_' + i in all_keys]
     plot_key = true_keys + list(set(all_keys) - set(true_plus_val_keys))
 
-    total_epochs = len(old[plot_key[0]]) + len(new[plot_key[0]])
-    total_epochs = range(1, total_epochs+1)
+    total_epochs = range(start_epoch, len(old[plot_key[0]]) + len(new[plot_key[0]])+start_epoch)
 
     row, col, figsize = get_row_col_figsize(len(plot_key), col=1, single_figsize=single_figsize)
     plt.figure(figsize=figsize)
@@ -275,7 +280,7 @@ def compare_histories(old, new, initial_epochs, single_figsize=(8, 4), keys=None
 
 def create_train_val_test(root_data_dir, val_ratio=0.1, test_ratio=0, output_dir=None, class_labels=None):
     # class labels
-    if not class_labels:
+    if empty(class_labels):
         class_labels = os.listdir(root_data_dir)
     
     # output_dir
