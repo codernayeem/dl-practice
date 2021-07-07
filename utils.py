@@ -84,7 +84,13 @@ def get_class_percent(pred, classes):
     class_int = np.argmax(pred)
     return classes[class_int], pred[class_int] * 100
 
-def plot_images(imgs, labels=None, col=5, classes=None, single_figsize=(5, 5), show_shape=False, from_links=False, from_dirs=False, gray=False, cmap=None):
+def get_row_col_figsize(total_item, col, single_figsize):
+    col = col if total_item >= col else total_item
+    row = math.ceil(total_item / col)
+    figsize = (single_figsize[0]*col, single_figsize[1]*row)
+    return row, col, figsize
+
+def plot_images(imgs, labels=None, col=5, classes=None, label_mode='int', single_figsize=(5, 5), show_shape=False, from_link=False, from_dir=False, cmap=None, show_boundary=False):
     '''
     Plotting images using matplolib
 
@@ -95,21 +101,28 @@ def plot_images(imgs, labels=None, col=5, classes=None, single_figsize=(5, 5), s
         classes : All classes for the images (default : None)
         single_figsize : plot size for each img
         show_shape : define if the shape will be shown in title (default : False)
-        gray : set True to set gray colormap
-        cmap : color map for imgs (e.g. cmap=plt.cm.binary)
+        cmap : color map for imgs (e.g. cmap=plt.cm.gray)
+        show_boundary : show axis without ticks
+        label_mode : 'int' or 'categorical'
     '''
-    if gray:
-        plt.gray()
-    row = math.ceil(len(imgs) / col)
-    plt.figure(figsize=(single_figsize[0]*col, single_figsize[1]*row))
+    if label_mode == 'categorical':
+        labels = categorical_to_int(labels)
+    elif label_mode != 'int':
+        raise ValueError('label_mode shoud be "int" or "categorical"')
+    row, col, figsize = get_row_col_figsize(len(imgs), col, single_figsize)
+    plt.figure(figsize=figsize)
     for c, img in enumerate(imgs):
-        if from_dirs:
+        if from_dir:
             img = image_to_numpy(img)
-        elif from_links:
+        elif from_link:
             img = download_a_image(img)
         plt.subplot(row, col, c+1)
         plt.imshow(img, cmap=cmap)
-        plt.axis(False)
+        if show_boundary:
+            plt.xticks([])
+            plt.yticks([])
+        else:
+            plt.axis(False)
         title = ''
         if labels is not None and classes is not None:
             title = f'{classes[labels[c]]}'
@@ -121,7 +134,7 @@ def plot_images(imgs, labels=None, col=5, classes=None, single_figsize=(5, 5), s
             plt.title(title)
     plt.show()
 
-def plot_image(img, label=None, classes=None, figsize=(6, 6), show_shape=False, from_link=False, from_dir=False, gray=False, cmap=None):
+def plot_image(img, label=None, classes=None, label_mode='int', figsize=(6, 6), show_shape=False, from_link=False, from_dir=False, cmap=None, show_boundary=False):
     '''
     Plotting an image using matplolib
 
@@ -132,25 +145,32 @@ def plot_image(img, label=None, classes=None, figsize=(6, 6), show_shape=False, 
         classes : All classes for the images (default : None)
         figsize : Figure size for the image (default : (6, 6))
         show_shape : define if the shape will be shown in title (default : False)
-        gray : set True to set gray colormap
-        cmap : color map for img (e.g. cmap=plt.cm.binary)
+        cmap : color map for img (e.g. cmap=plt.cm.gray)
+        show_boundary : show axis without ticks
+        label_mode : 'int' or 'categorical'
     '''
-    plot_images(np.expand_dims(img, 0), labels=None if label == None else [label], col=1, classes=classes, single_figsize=figsize, show_shape=show_shape, from_links=from_link, from_dirs=from_dir, gray=gray, cmap=cmap)
+    plot_images(np.expand_dims(img, 0), labels=None if label == None else [label], col=1, classes=classes, label_mode=label_mode, single_figsize=figsize, show_shape=show_shape, from_link=from_link, from_dir=from_dir, cmap=cmap, show_boundary=show_boundary)
 
-def plot_pred_images(model, imgs, labels=None, col=5, single_figsize=(5, 5), classes=None, rescale=None, IMAGE_SHAPE=None, from_links=False, from_dirs=False, gray=False, cmap=None):
-    if gray:
-        plt.gray()
-    row = math.ceil(len(imgs) / col)
-    plt.figure(figsize=(single_figsize[0]*col, single_figsize[1]*row))
+def plot_pred_images(model, imgs, labels=None, col=5, label_mode='int', classes=None, single_figsize=(5, 5), rescale=None, IMAGE_SHAPE=None, from_link=False, from_dir=False, cmap=None, show_boundary=False):
+    if label_mode == 'categorical':
+        labels = categorical_to_int(labels)
+    elif label_mode != 'int':
+        raise ValueError('label_mode shoud be "int" or "categorical"')
+    row, col, figsize = get_row_col_figsize(len(imgs), col, single_figsize)
+    plt.figure(figsize)
     for c, img in enumerate(imgs):
-        if from_dirs:
+        if from_dir:
             img = image_to_numpy(img)
-        elif from_links:
+        elif from_link:
             img = download_a_image(img)
 
         plt.subplot(row, col, c+1)
         plt.imshow(img, cmap=cmap)
-        plt.axis(False)
+        if show_boundary:
+            plt.xticks([])
+            plt.yticks([])
+        else:
+            plt.axis(False)
         if IMAGE_SHAPE:
             img = cv2.resize(img, IMAGE_SHAPE)
         if rescale:
@@ -162,8 +182,8 @@ def plot_pred_images(model, imgs, labels=None, col=5, single_figsize=(5, 5), cla
         plt.title(title)
     plt.show()
 
-def plot_pred_image(model, img, label=None, figsize=(6, 6), classes=None, rescale=None, IMAGE_SHAPE=None, from_link=False, from_dir=False, gray=False, cmap=None):
-    plot_pred_images(model, np.expand_dims(img, 0), labels=None if label == None else [label], col=1, single_figsize=figsize, classes=classes, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, from_links=from_link, from_dirs=from_dir, gray=gray, cmap=cmap)
+def plot_pred_image(model, img, label=None, label_mode='int', classes=None, figsize=(6, 6), rescale=None, IMAGE_SHAPE=None, from_link=False, from_dir=False, cmap=None, show_boundary=False):
+    plot_pred_images(model, np.expand_dims(img, 0), labels=None if label == None else [label], col=1, label_mode=label_mode, classes=classes, single_figsize=figsize, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, from_link=from_link, from_dir=from_dir, cmap=cmap, show_boundary=show_boundary)
 
 def plot_history(history, single_figsize=(6, 4), val=True, keys=None):
     history = pd.DataFrame(history.history)
@@ -179,9 +199,7 @@ def plot_history(history, single_figsize=(6, 4), val=True, keys=None):
     true_plus_val_keys = true_keys + ['val_' + i for i in true_keys if 'val_' + i in all_keys]
     plot_key = true_keys + list(set(all_keys) - set(true_plus_val_keys))
 
-    col = 3 if len(plot_key) >= 3 else len(plot_key)
-    row = math.ceil(len(plot_key) / col)
-    figsize = (single_figsize[0]*col, single_figsize[1]*row)
+    row, col, figsize = get_row_col_figsize(len(plot_key), col=3, single_figsize=single_figsize)
     plt.figure(figsize=figsize)
 
     for c, key in enumerate(plot_key):
