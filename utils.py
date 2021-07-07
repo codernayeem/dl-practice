@@ -28,9 +28,17 @@ def categorical_to_int(labels, axis=1):
     '''
     return np.argmax(labels, axis=axis)
 
-def get_random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, classes=None, return_labels=True):
+def get_random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, classes=None, return_labels=True, label_classes=None, label_mode='class'):
+    # label_mode : 'class', 'int'
+    # label_classes : used for label_mode : 'int' (To get the index)
     data_dir = str(data_dir)
     class_names = [class_name for class_name in os.listdir(data_dir) if isdir(join(data_dir, class_name))]
+
+    if return_labels:
+        if label_mode not in ['class', 'int']:
+            raise ValueError(f'label_mode : "{label_mode}" not found in ["class", "int"]')
+        if label_mode == 'int' and not label_classes:
+            raise ValueError(f"""'label_classes' needed for 'label_mode' : "int" """)
 
     if classes:
         for class_name in classes:
@@ -56,7 +64,10 @@ def get_random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, classes=Non
             for i in rand_images:
                 rand.append(join(data_dir, class_name, i))
                 if return_labels:
-                    labels.append(class_name)
+                    if label_mode == 'class':
+                        labels.append(class_name)
+                    else:
+                        labels.append(label_classes.index(class_name))
 
     return (rand, labels) if return_labels else rand
 
