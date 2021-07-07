@@ -84,7 +84,7 @@ def get_class_percent(pred, classes):
     class_int = np.argmax(pred)
     return classes[class_int], pred[class_int] * 100
 
-def plot_images(imgs, labels=None, col=5, classes=None, single_figsize=(5, 5), show_shape=False, from_links=False, from_dirs=False, gray=False):
+def plot_images(imgs, labels=None, col=5, classes=None, single_figsize=(5, 5), show_shape=False, from_links=False, from_dirs=False, gray=False, cmap=None):
     '''
     Plotting images using matplolib
 
@@ -96,6 +96,7 @@ def plot_images(imgs, labels=None, col=5, classes=None, single_figsize=(5, 5), s
         single_figsize : plot size for each img
         show_shape : define if the shape will be shown in title (default : False)
         gray : set True to set gray colormap
+        cmap : color map for imgs (e.g. cmap=plt.cm.binary)
     '''
     if gray:
         plt.gray()
@@ -107,7 +108,7 @@ def plot_images(imgs, labels=None, col=5, classes=None, single_figsize=(5, 5), s
         elif from_links:
             img = download_a_image(img)
         plt.subplot(row, col, c+1)
-        plt.imshow(img)
+        plt.imshow(img, cmap=cmap)
         plt.axis(False)
         title = ''
         if labels is not None and classes is not None:
@@ -120,7 +121,7 @@ def plot_images(imgs, labels=None, col=5, classes=None, single_figsize=(5, 5), s
             plt.title(title)
     plt.show()
 
-def plot_image(img, label=None, classes=None, figsize=(6, 6), show_shape=False, from_link=False, from_dir=False, gray=False):
+def plot_image(img, label=None, classes=None, figsize=(6, 6), show_shape=False, from_link=False, from_dir=False, gray=False, cmap=None):
     '''
     Plotting an image using matplolib
 
@@ -132,10 +133,11 @@ def plot_image(img, label=None, classes=None, figsize=(6, 6), show_shape=False, 
         figsize : Figure size for the image (default : (6, 6))
         show_shape : define if the shape will be shown in title (default : False)
         gray : set True to set gray colormap
+        cmap : color map for img (e.g. cmap=plt.cm.binary)
     '''
-    plot_images(np.expand_dims(img, 0), labels=None if label == None else [label], col=1, classes=classes, single_figsize=figsize, show_shape=show_shape, from_links=from_link, from_dirs=from_dir, gray=gray)
+    plot_images(np.expand_dims(img, 0), labels=None if label == None else [label], col=1, classes=classes, single_figsize=figsize, show_shape=show_shape, from_links=from_link, from_dirs=from_dir, gray=gray, cmap=cmap)
 
-def plot_pred_images(model, imgs, labels=None, col=5, single_figsize=(5, 5), classes=None, rescale=None, IMAGE_SHAPE=None, from_links=False, from_dirs=False, gray=False):
+def plot_pred_images(model, imgs, labels=None, col=5, single_figsize=(5, 5), classes=None, rescale=None, IMAGE_SHAPE=None, from_links=False, from_dirs=False, gray=False, cmap=None):
     if gray:
         plt.gray()
     row = math.ceil(len(imgs) / col)
@@ -147,7 +149,7 @@ def plot_pred_images(model, imgs, labels=None, col=5, single_figsize=(5, 5), cla
             img = download_a_image(img)
 
         plt.subplot(row, col, c+1)
-        plt.imshow(img)
+        plt.imshow(img, cmap=cmap)
         plt.axis(False)
         if IMAGE_SHAPE:
             img = cv2.resize(img, IMAGE_SHAPE)
@@ -160,8 +162,8 @@ def plot_pred_images(model, imgs, labels=None, col=5, single_figsize=(5, 5), cla
         plt.title(title)
     plt.show()
 
-def plot_pred_image(model, img, label=None, figsize=(6, 6), classes=None, rescale=None, IMAGE_SHAPE=None, from_link=False, from_dir=False, gray=False):
-    plot_pred_images(model, np.expand_dims(img, 0), labels=None if label == None else [label], col=1, single_figsize=figsize, classes=classes, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, from_links=from_link, from_dirs=from_dir, gray=gray)
+def plot_pred_image(model, img, label=None, figsize=(6, 6), classes=None, rescale=None, IMAGE_SHAPE=None, from_link=False, from_dir=False, gray=False, cmap=None):
+    plot_pred_images(model, np.expand_dims(img, 0), labels=None if label == None else [label], col=1, single_figsize=figsize, classes=classes, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, from_links=from_link, from_dirs=from_dir, gray=gray, cmap=cmap)
 
 def plot_history(history, single_figsize=(6, 4), val=True, keys=None):
     history = pd.DataFrame(history.history)
