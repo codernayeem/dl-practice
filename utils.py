@@ -89,7 +89,13 @@ def print_class_files(data_dir, print_full=False):
 
 def download_a_image(url):
     fl_name = url.split('/')[-1]
+
     res = requests.get(url)
+    if res.status_code != 200:
+        raise Exception(f'"{url}" returned status_code : {res.status_code}')
+    if res.headers['Content-Type'] == 'text/html':
+        raise Exception(f'"{url}" returned text/html; not an image')
+    
     with open(fl_name, 'wb') as fl:
         fl.write(res.content)
     return image_to_numpy(fl_name)
