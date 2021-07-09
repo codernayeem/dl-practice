@@ -15,56 +15,52 @@ from random import randint, choices
 from os.path import join, isdir, isfile
 from sklearn.metrics import confusion_matrix
 
-import tensorflow as tf
+from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
 
+
+def get_dirs(path):
+    return [name for name in os.listdir(path) if isdir(join(path, name))]
+
+def get_files(path):
+    return [name for name in os.listdir(path) if isfile(join(path, name))]
 
 def empty(n):
     n = np.array(n)
     return (n == np.array(None)).all() or n.size == 0
 
-def mount_gdrive():
+def mount_gdrive(path='/content/drive'):
     '''
-    Mount google drive and return drive path '/content/drive/My Drive'
+    Mount google drive and return the drive path
     '''
     from google.colab import drive
-    drive.mount('/content/drive')
-    return '/content/drive/My Drive'
+    drive.mount(path)
+    return join(path, 'My drive')
 
-def categorical_to_int(labels, axis=1):
+def get_random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, rand_classes=None, label_mode='class', label_class_names=None):
     '''
-    return labels in int mode from categorical mode
-
-    Parameters:
-    -----------
-        labels : labels in categorical mode
-        axis : if labels are in 2D set axis=1 or if labels are in 1D set axis=0
+    label_mode : 'class', 'int', None
+    label_class_names : used for label_mode : 'int' (To get the index)
     '''
-    return np.argmax(labels, axis=axis)
-
-def get_random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, classes=None, return_labels=True, label_classes=None, label_mode='class'):
-    # label_mode : 'class', 'int'
-    # label_classes : used for label_mode : 'int' (To get the index)
     data_dir = str(data_dir)
-    class_names = [class_name for class_name in os.listdir(data_dir) if isdir(join(data_dir, class_name))]
+    class_names = get_dirs(data_dir)
 
-    if return_labels:
-        if label_mode not in ['class', 'int']:
-            raise ValueError(f'label_mode : "{label_mode}" not found in ["class", "int"]')
-        if label_mode == 'int' and not label_classes:
-            raise ValueError(f"""'label_classes' needed for 'label_mode' : "int" """)
+    if label_mode not in ['class', 'int', None]:
+        raise ValueError(f'label_mode : "{label_mode}" not found in ["class", "int", None]')
+    if label_mode == 'int' and not label_class_names:
+        raise ValueError(f"""'label_class_names' needed for 'label_mode' : "int" """)
 
-    if classes:
-        for class_name in classes:
+    if rand_classes:
+        for class_name in rand_classes:
             if class_name not in class_names:
                 raise ValueError(f'"{class_name}" not found in "{data_dir}""')
     else:
-        classes = class_names
+        rand_classes = class_names
 
     if equal_img_per_class:
-        rand_list = {class_name : equal_img_per_class for class_name in classes}
+        rand_list = {class_name : equal_img_per_class for class_name in rand_classes}
     else:
-        rand_list = {class_name : 0 for class_name in classes}
-        for class_name in choices(classes, k=rand_imgs):
+        rand_list = {class_name : 0 for class_name in rand_classes}
+        for class_name in choices(rand_classes, k=rand_imgs):
             rand_list[class_name] += 1
 
     rand = []
@@ -75,14 +71,13 @@ def get_random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, classes=Non
             rand_images = choices([fl for fl in os.listdir(class_dir) if isfile(join(class_dir, fl))],
                                   k=rand_img_num)
             for i in rand_images:
-                rand.append(join(data_dir, class_name, i))
-                if return_labels:
-                    if label_mode == 'class':
-                        labels.append(class_name)
-                    else:
-                        labels.append(label_classes.index(class_name))
+                rand.append(join(class_dir, i))
+                if label_mode == 'class':
+                    labels.append(class_name)
+                elif label_mode == 'int':
+                    labels.append(label_class_names.index(class_name))
 
-    return (rand, labels) if return_labels else rand
+    return [rand, labels] if label_mode else rand
 
 def print_class_files(data_dir, print_full=False):
     data_dir = str(data_dir)
@@ -93,27 +88,109 @@ def print_class_files(data_dir, print_full=False):
             c = len([fl for fl in os.listdir(class_dir) if isfile(join(class_dir, fl))])
             print(f'  - Found {c} {class_dir if print_full else i}')
 
-def download_a_image(url):
-    fl_name = url.split('/')[-1]
+def __image_to_numpy(file_dir, image_size):
+    img =  cv2.cvtColor(cv2.imread(file_dir), cv2.COLOR_BGR2RGB)
+    return cv2.resize(img, image_size) if image_size else img
 
+def load_images(file_dir, image_size=None):
+    single = type(file_dir) == str
+    if single:
+        file_dir = [file_dir]
+
+    r = []
+    for fl in file_dir:
+        r.append(__image_to_numpy(str(fl), image_size))
+    return r[0] if single else np.array(r)
+
+def load_images_genarator(file_dir, image_size=None):
+    if type(file_dir) == str:
+        file_dir = [file_dir]
+    
+    for fl in file_dir:
+        yield __image_to_numpy(str(fl), image_size)
+
+def __download_images(url, download_path, return_mode, image_shape):
+    fl_name = url.split('/')[-1].split('?')[0]
     res = requests.get(url)
     if res.status_code != 200:
         raise Exception(f'"{url}" returned status_code : {res.status_code}')
     if res.headers['Content-Type'] == 'text/html':
         raise Exception(f'"{url}" returned text/html; not an image')
-    
-    with open(fl_name, 'wb') as fl:
+
+    path = join(download_path, fl_name) if download_path else fl_name
+    with open(path, 'wb') as fl:
         fl.write(res.content)
-    return image_to_numpy(fl_name)
 
-def image_to_numpy(file_dir, image_size=None):
-    img =  cv2.cvtColor(cv2.imread(file_dir), cv2.COLOR_BGR2RGB)
-    return img if not image_size else cv2.resize(img, image_size)
+    if return_mode == 'img':
+        return load_images(path, image_shape)
+    elif return_mode == 'name':
+        return fl_name
+    elif return_mode == 'path':
+        return path
+    else:
+        return None
 
-def get_class_percent(pred, classes=None):
-    pred = pred.squeeze()
-    class_int = np.argmax(pred)
-    return (class_int if empty(classes) else classes[class_int]), pred[class_int] * 100
+def download_images(url, download_path=None, return_mode='img', image_shape=None):
+    '''
+    Parameters:
+        url : just a url or list of urls
+        download_path : path for downloaded img
+        return_mode : ['img', 'path', 'name', None]
+    '''
+
+    if return_mode not in ['img', 'path', 'name', None]:
+        raise ValueError("return_mode should be one of ['img', 'path', 'name', None]")
+
+    single = type(url) == str
+    urls = [url] if single else url
+
+    r = []
+    for url in urls:
+        res = __download_images(str(url), download_path, return_mode, image_shape)
+        if return_mode:
+            r.append(res)
+
+    if return_mode:
+        return r[0] if single else (np.array(r) if return_mode == 'img' else r)
+
+def download_images_genarator(url, download_path=None, return_mode='img', image_shape=None):
+    '''
+    Parameters:
+        url : just a url or list of urls
+        download_path : path for downloaded img
+        return_mode : ['img', 'path', 'name', None]
+    '''
+
+    if return_mode not in ['img', 'path', 'name', None]:
+        raise ValueError("return_mode should be one of ['img', 'path', 'name', None]")
+
+    single = type(url) == str
+    urls = [url] if single else url
+
+    for url in urls:
+        yield __download_images(str(url), download_path, return_mode, image_shape)
+
+def get_pred_percent(preds, percent_round=2):
+    percents = []
+    ints = []
+    for x in preds:
+        pos = np.argmax(x)
+        ints.append(pos)
+        percents.append(x[pos] * 100)
+    return np.array(ints), np.round(percents, percent_round)
+
+def get_pred_percent_sigmoid(preds, percent_round=2):
+    preds = np.array(preds)
+    preds = preds.reshape(preds.shape[0]) # make it 1D
+    percents = []
+    ints = []
+    for x in preds:
+        pos = round(x)
+        ints.append(pos)
+        if pos == 0:
+            x = (1 - x)
+        percents.append(x * 100)
+    return np.array(ints), np.round(percents, percent_round)
 
 def get_row_col_figsize(total_item, col, single_figsize):
     col = col if total_item >= col else total_item
@@ -121,35 +198,47 @@ def get_row_col_figsize(total_item, col, single_figsize):
     figsize = (single_figsize[0]*col, single_figsize[1]*row)
     return row, col, figsize
 
-def plot_images(imgs, labels=None, col=5, classes=None, label_mode='int', single_figsize=(5, 5), show_shape=False, from_link=False, from_dir=False, cmap=None, show_boundary=False):
+def plot_images(imgs, labels=None, class_names=None, col=5, label_mode='int', single_figsize=(4, 4), show_shape=False, from_link=False, from_dir=False, rescale=None, IMAGE_SHAPE=None, show_boundary=False, **keyargs):
     '''
     Plotting images using matplolib
 
     Parameters:
         imgs : array of images
         labels : labels for the images (Optional)
+        class_names : All class_names for the images (default : None)
         col  : column number (default : 5)
-        classes : All classes for the images (default : None)
+        label_mode : 'int' or 'categorical'
         single_figsize : plot size for each img
         show_shape : define if the shape will be shown in title (default : False)
-        cmap : color map for imgs (e.g. cmap=plt.cm.gray)
+        from_link : if the imgs are links of images
+        from_dir : if the imgs are paths of images
+        rescale : rescale images (e.g. 1/255)
+        IMAGE_SHAPE : reshapimg images
         show_boundary : show axis without ticks
-        label_mode : 'int' or 'categorical'
+        **keyargs : extra keyword aurguments goes to pl.imshow()
     '''
     if not empty(labels):
         if label_mode == 'categorical':
-            labels = categorical_to_int(labels)
+            labels = np.argmax(labels, axis=1)
         elif label_mode != 'int':
             raise ValueError('label_mode shoud be "int" or "categorical"')
     row, col, figsize = get_row_col_figsize(len(imgs), col, single_figsize)
     plt.figure(figsize=figsize)
+
+    if from_dir:
+        imgs = load_images_genarator(imgs)
+    elif from_link:
+        imgs = download_images_genarator(imgs)
+
     for c, img in enumerate(imgs):
-        if from_dir:
-            img = image_to_numpy(img)
-        elif from_link:
-            img = download_a_image(img)
+        img_shape = img.shape
+        if rescale:
+            img = img * rescale
+        if IMAGE_SHAPE:
+            img = cv2.resize(img, IMAGE_SHAPE)
+        
         plt.subplot(row, col, c+1)
-        plt.imshow(img, cmap=cmap)
+        plt.imshow(img, **keyargs)
         if show_boundary:
             plt.xticks([])
             plt.yticks([])
@@ -157,17 +246,17 @@ def plot_images(imgs, labels=None, col=5, classes=None, label_mode='int', single
             plt.axis(False)
         title = ''
         if not empty(labels): 
-            if not empty(classes):
-                title = f'{classes[labels[c]]}'
+            if not empty(class_names):
+                title = f'{class_names[labels[c]]}'
             else:
                 title = f'{labels[c]}'
         if show_shape:
-            title += f' ({img.shape})'
+            title += f' ({img_shape})'
         if title:
             plt.title(title)
     plt.show()
 
-def plot_image(img, label=None, classes=None, label_mode='int', figsize=(6, 6), show_shape=False, from_link=False, from_dir=False, cmap=None, show_boundary=False):
+def plot_image(img, label=None, class_names=None, label_mode='int', figsize=(6, 6), show_shape=False, from_link=False, from_dir=False, rescale=None, IMAGE_SHAPE=None, show_boundary=False, **keyargs):
     '''
     Plotting an image using matplolib
 
@@ -175,49 +264,79 @@ def plot_image(img, label=None, classes=None, label_mode='int', figsize=(6, 6), 
     ----------
         img : the image in numbers
         label : label for the image (Optional)
-        classes : All classes for the images (default : None)
+        class_names : All class_names for the images (default : None)
+        label_mode : 'int' or 'categorical'
         figsize : Figure size for the image (default : (6, 6))
         show_shape : define if the shape will be shown in title (default : False)
-        cmap : color map for img (e.g. cmap=plt.cm.gray)
+        from_link : if the img is a link of image
+        from_dir : if the img is a path of image
+        rescale : rescale image (e.g. 1/255)
+        IMAGE_SHAPE : reshapimg image
         show_boundary : show axis without ticks
         label_mode : 'int' or 'categorical'
+        **keyargs : extra keyword aurguments goes to pl.imshow()
     '''
-    plot_images(np.expand_dims(img, 0), labels=None if label == None else [label], col=1, classes=classes, label_mode=label_mode, single_figsize=figsize, show_shape=show_shape, from_link=from_link, from_dir=from_dir, cmap=cmap, show_boundary=show_boundary)
+    plot_images(np.expand_dims(img, 0), labels=[label] if label else None, class_names=class_names, col=1, label_mode=label_mode, single_figsize=figsize, show_shape=show_shape, from_link=from_link, from_dir=from_dir, rescale=None, IMAGE_SHAPE=None, show_boundary=show_boundary, **keyargs)
 
-def plot_pred_images(model, imgs, labels=None, col=5, label_mode='int', classes=None, single_figsize=(5, 5), rescale=None, IMAGE_SHAPE=None, from_link=False, from_dir=False, cmap=None, show_boundary=False):
-    if not empty(labels):
-        if label_mode == 'categorical':
-            labels = categorical_to_int(labels)
-        elif label_mode != 'int':
-            raise ValueError('label_mode shoud be "int" or "categorical"')
+def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', y_true_mode='int', class_names=None, col=5, single_figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), **keyargs):
+    '''
+    y_pred_mode : ['softmax', 'sigmoid', 'int']
+    y_true_mode : ['categorical', 'int']
+    '''
+
+    y_pred = np.array(y_pred)
+    if y_pred_mode == 'softmax':
+        y_pred, percents = get_pred_percent(y_pred, percent_decimal)
+    elif y_pred_mode == 'sigmoid':
+        y_pred, percents = get_pred_percent_sigmoid(y_pred, percent_decimal)
+    elif y_pred_mode != 'int':
+        raise ValueError("y_pred_mode should be in ['softmax', 'sigmoid', 'int']")
+
+    if not empty(y_true):
+        if y_true_mode == 'categorical':
+            y_true = np.argmax(y_true, axis=1)
+        elif y_true_mode != 'int':
+            raise ValueError('y_true_mode shoud be "int" or "categorical"')
+    
     row, col, figsize = get_row_col_figsize(len(imgs), col, single_figsize)
     plt.figure(figsize=figsize)
-    for c, img in enumerate(imgs):
-        if from_dir:
-            img = image_to_numpy(img)
-        elif from_link:
-            img = download_a_image(img)
-
-        plt.subplot(row, col, c+1)
-        plt.imshow(img, cmap=cmap)
+    for i, img in enumerate(imgs):
+        if rescale:
+            img = img * rescale
+        if IMAGE_SHAPE:
+            img = cv2.resize(img, IMAGE_SHAPE)
+        
+        plt.subplot(row, col, i+1)
+        plt.imshow(img, **keyargs)
         if show_boundary:
             plt.xticks([])
             plt.yticks([])
         else:
             plt.axis(False)
-        if IMAGE_SHAPE:
-            img = cv2.resize(img, IMAGE_SHAPE)
-        if rescale:
-            img = img * rescale
-        class_name, percent = get_class_percent(model.predict(np.expand_dims(img, axis=0)), classes)
-        title = f'{round(percent, 2)}% {class_name}'
-        if not empty(labels):
-            title += f' ({classes[labels[c]]})'
-        plt.title(title)
+        
+        title = ''
+        if y_pred_mode != 'int' and show_percent: # we have percents
+            title += f"{percents[i]}% "
+
+        if class_names:
+            title += f"{class_names[y_pred[i]]}"
+        else:
+            title += f"{y_pred[i]}"
+
+        color = 'black'
+        if not empty(y_true):
+            if class_names:
+                title += f" ({class_names[y_true[i]]})"
+            else:
+                title += f" ({y_true[i]})"
+            correct_pred = y_true[i] == y_pred[i]
+            color = (title_color[0] if correct_pred else title_color[1]) if title_color else None
+        
+        plt.title(title, color=color)
     plt.show()
 
-def plot_pred_image(model, img, label=None, label_mode='int', classes=None, figsize=(6, 6), rescale=None, IMAGE_SHAPE=None, from_link=False, from_dir=False, cmap=None, show_boundary=False):
-    plot_pred_images(model, np.expand_dims(img, 0), labels=None if label == None else [label], col=1, label_mode=label_mode, classes=classes, single_figsize=figsize, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, from_link=from_link, from_dir=from_dir, cmap=cmap, show_boundary=show_boundary)
+def plot_pred_image(img, y_pred, y_true=None, y_pred_mode='softmax', y_true_mode='int', class_names=None, figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), **keyargs):
+    plot_pred_images(np.expand_dims(img, 0), y_pred=np.expand_dims(y_pred, 0), y_true=None if empty(y_true) else np.expand_dims(y_true, 0), y_pred_mode='softmax', y_true_mode='int', class_names=class_names, col=1, single_figsize=figsize, show_percent=show_percent, percent_decimal=percent_decimal, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary)
 
 def plot_history(history, col=3, single_figsize=(6, 4), keys=None, start_epoch=1):
     history = history.history
@@ -316,7 +435,7 @@ def create_train_val_test(root_data_dir, val_ratio=0.1, test_ratio=0, output_dir
         for name in test_FileNames:
             shutil.copy(join(src, name), join(output_dir, 'test', class_name, name))
 
-def print_confusion_matrix(y_test, y_pred, class_names, figsize=(10, 7), fontsize=14, xticks_rotation=45, title=None):
+def plot_confusion_matrix(y_test, y_pred, class_names, figsize=(10, 7), fontsize=14, xticks_rotation=45, title=None):
     df_cm = pd.DataFrame(confusion_matrix(y_test, y_pred), index=class_names, columns=class_names)
     plt.figure(figsize=figsize)
     try:
@@ -353,6 +472,8 @@ def create_tensorboard_callback(dir_name, experiment_name):
         experiment_name: name of experiment directory (e.g. efficientnet_model_1)
     """
     log_dir = join(dir_name, experiment_name, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
     print(f"Saving TensorBoard log files to: {log_dir}")
-    return tensorboard_callback
+    return TensorBoard(log_dir=log_dir)
+
+def create_modelcheckpoint_callback(checkpoint_path, **args):
+    return ModelCheckpoint(filepath=checkpoint_path, **args)
