@@ -229,10 +229,9 @@ def plot_images(imgs, labels=None, class_names=None, col=5, label_mode='int', si
         imgs = load_images_genarator(imgs)
     elif from_link:
         imgs = download_images_genarator(imgs)
-    else:
-        imgs = np.array(imgs)
 
     for c, img in enumerate(imgs):
+        img = np.array(img)
         img_shape = img.shape
         if rescale:
             img = img * rescale
@@ -303,6 +302,7 @@ def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', y_true_mo
     row, col, figsize = get_row_col_figsize(len(imgs), col, single_figsize)
     plt.figure(figsize=figsize)
     for i, img in enumerate(imgs):
+        img = np.array(img)
         if rescale:
             img = img * rescale
         if IMAGE_SHAPE:
