@@ -251,7 +251,7 @@ def plot_images(imgs, labels=None, class_names=None, col=5, label_mode='int', si
             else:
                 title = f'{labels[c]}'
         if show_shape:
-            title += f' ({img_shape})'
+            title += f' {img_shape}'
         if title:
             plt.title(title)
     plt.show()
@@ -276,7 +276,7 @@ def plot_image(img, label=None, class_names=None, label_mode='int', figsize=(6, 
         label_mode : 'int' or 'categorical'
         **keyargs : extra keyword aurguments goes to pl.imshow()
     '''
-    plot_images(np.expand_dims(img, 0), labels=[label] if label else None, class_names=class_names, col=1, label_mode=label_mode, single_figsize=figsize, show_shape=show_shape, from_link=from_link, from_dir=from_dir, rescale=None, IMAGE_SHAPE=None, show_boundary=show_boundary, **keyargs)
+    plot_images(np.expand_dims(img, 0), labels=[label] if label else None, class_names=class_names, col=1, label_mode=label_mode, single_figsize=figsize, show_shape=show_shape, from_link=from_link, from_dir=from_dir, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary, **keyargs)
 
 def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', y_true_mode='int', class_names=None, col=5, single_figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), **keyargs):
     '''
@@ -336,7 +336,7 @@ def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', y_true_mo
     plt.show()
 
 def plot_pred_image(img, y_pred, y_true=None, y_pred_mode='softmax', y_true_mode='int', class_names=None, figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), **keyargs):
-    plot_pred_images(np.expand_dims(img, 0), y_pred=np.expand_dims(y_pred, 0), y_true=None if empty(y_true) else np.expand_dims(y_true, 0), y_pred_mode='softmax', y_true_mode='int', class_names=class_names, col=1, single_figsize=figsize, show_percent=show_percent, percent_decimal=percent_decimal, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary)
+    plot_pred_images(np.expand_dims(img, 0), y_pred=np.expand_dims(y_pred, 0), y_true=None if empty(y_true) else np.expand_dims(y_true, 0), y_pred_mode=y_pred_mode, y_true_mode=y_true_mode, class_names=class_names, col=1, single_figsize=figsize, show_percent=show_percent, percent_decimal=percent_decimal, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary)
 
 def plot_history(history, col=3, single_figsize=(6, 4), keys=None, start_epoch=1):
     history = history.history
