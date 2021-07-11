@@ -229,6 +229,8 @@ def plot_images(imgs, labels=None, class_names=None, col=5, label_mode='int', si
         imgs = load_images_genarator(imgs)
     elif from_link:
         imgs = download_images_genarator(imgs)
+    else:
+        imgs = np.array(imgs)
 
     for c, img in enumerate(imgs):
         img_shape = img.shape
