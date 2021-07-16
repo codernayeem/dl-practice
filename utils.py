@@ -34,7 +34,7 @@ def mount_gdrive(path='/content/drive'):
     '''
     from google.colab import drive
     drive.mount(path)
-    return join(path, 'My drive')
+    return path
 
 def get_random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, rand_classes=None, label_mode='class', label_class_names=None):
     '''
