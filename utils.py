@@ -39,12 +39,12 @@ def empty(n):
     n = np.array(n)
     return (n == np.array(None)).all() or n.size == 0
 
-def mount_gdrive(path='/content/drive'):
+def mount_gdrive(path='/content/drive', force_remount=False):
     '''
     Mount google drive and return the drive path
     '''
     from google.colab import drive
-    drive.mount(path)
+    drive.mount(path, force_remount=force_remount)
     return path
 
 def get_random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, rand_classes=None, label_mode='class', label_class_names=None):
