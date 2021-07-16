@@ -17,17 +17,17 @@ from shutil import copy
 from sklearn.metrics import confusion_matrix
 
 
-def create_dir(path):
-    p = Path(str(path))
-    if not p.exists():
-        p.mkdir()
-
-def copytree(src, dst, create_dst=True, verbose=1):
-    if create_dst:
-        create_dir(dst)
-    res = dir_util.copy_tree(src, dst)
+def create_dir(path, verbose=0):
+    res = dir_util.mkpath(str(path))
     if verbose:
-        return res
+        return res # return all created dirs
+
+def copytree(src, dst, create_dst=True, verbose=0):
+    if create_dst:
+        create_dir(str(dst))
+    res = dir_util.copy_tree(str(src), str(dst))
+    if verbose:
+        return res # return all copied files
 
 def get_dirs(path):
     return [name for name in os.listdir(path) if isdir(join(path, name))]
