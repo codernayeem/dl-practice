@@ -338,10 +338,16 @@ def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', y_true_mo
 def plot_pred_image(img, y_pred, y_true=None, y_pred_mode='softmax', y_true_mode='int', class_names=None, figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), **keyargs):
     plot_pred_images(np.expand_dims(img, 0), y_pred=np.expand_dims(y_pred, 0), y_true=None if empty(y_true) else np.expand_dims(y_true, 0), y_pred_mode=y_pred_mode, y_true_mode=y_true_mode, class_names=class_names, col=1, single_figsize=figsize, show_percent=show_percent, percent_decimal=percent_decimal, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary)
 
-def plot_history(history, col=3, single_figsize=(6, 4), keys=None):
-    start_epoch = history.epochs[0] + 1
+def plot_history(history, col=3, single_figsize=(6, 4), keys=None, fixed_xlim=False):
+    epochs = history.epoch
     history = history.history
     all_keys = history.keys()
+
+    # find errors
+    if len(epochs) == 0:
+        raise ValueError("The history object is empty.")
+    elif len(all_keys) == 0:
+        raise ValueError("The history object has no key.")
 
     if not empty(keys):
         for key in keys:
@@ -353,27 +359,38 @@ def plot_history(history, col=3, single_figsize=(6, 4), keys=None):
     true_plus_val_keys = true_keys + ['val_' + i for i in true_keys if 'val_' + i in all_keys]
     plot_key = true_keys + list(set(all_keys) - set(true_plus_val_keys))
 
-    total_epochs = range(start_epoch, len(history[plot_key[0]])+start_epoch)
+    start_epoch = epochs[0] + 1
+    epochs = range(start_epoch, len(epochs) + start_epoch)
 
     row, col, figsize = get_row_col_figsize(len(plot_key), col=col, single_figsize=single_figsize)
     plt.figure(figsize=figsize)
 
     for c, key in enumerate(plot_key):
         plt.subplot(row, col, c+1)
-        plt.plot(total_epochs, history[key], label=key)
+        plt.plot(epochs, history[key], label=key)
         if 'val_' + key in all_keys:
-            plt.plot(total_epochs, history['val_' + key], label='val_' + key)
+            plt.plot(epochs, history['val_' + key], label='val_' + key)
         plt.xlabel('epoch')
+        if fixed_xlim:
+            plt.xlim([epochs[0], epochs[-1]])
         plt.legend()
     plt.show()
 
-def compare_histories(old, new, single_figsize=(8, 4), keys=None):
+def compare_histories(old, new, single_figsize=(8, 4), keys=None, fixed_xlim=False):
     """
     Compares two model history objects.
     """
-    old, new, old_epochs, new_epochs = old.history, new.history, old.epochs, new.epochs
+    old, new, old_epochs, new_epochs = old.history, new.history, old.epoch, new.epoch
     all_keys = list(set(old.keys()) & set(new.keys())) # get all common keys
-    
+
+    # find errors
+    if len(old_epochs) == 0:
+        raise ValueError("The first history object is empty.")
+    elif len(new_epochs) == 0:
+        raise ValueError("The second history object is empty.")
+    elif len(all_keys) == 0:
+        raise ValueError("No common keys found in these two history object.")
+
     if not empty(keys):
         for key in keys:
             if key not in all_keys:
@@ -398,6 +415,8 @@ def compare_histories(old, new, single_figsize=(8, 4), keys=None):
             plt.plot(total_epochs, old['val_' + key] + new['val_' + key], label='val_' + key)
         plt.plot([mid_epoch, mid_epoch], plt.ylim())
         plt.xlabel('epoch')
+        if fixed_xlim:
+            plt.xlim([total_epochs[0], total_epochs[-1]])
         plt.legend()
     plt.show()
 
