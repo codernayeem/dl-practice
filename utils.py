@@ -338,7 +338,8 @@ def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', y_true_mo
 def plot_pred_image(img, y_pred, y_true=None, y_pred_mode='softmax', y_true_mode='int', class_names=None, figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), **keyargs):
     plot_pred_images(np.expand_dims(img, 0), y_pred=np.expand_dims(y_pred, 0), y_true=None if empty(y_true) else np.expand_dims(y_true, 0), y_pred_mode=y_pred_mode, y_true_mode=y_true_mode, class_names=class_names, col=1, single_figsize=figsize, show_percent=show_percent, percent_decimal=percent_decimal, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary)
 
-def plot_history(history, col=3, single_figsize=(6, 4), keys=None, start_epoch=1):
+def plot_history(history, col=3, single_figsize=(6, 4), keys=None):
+    start_epoch = history.epochs[0] + 1
     history = history.history
     all_keys = history.keys()
 
@@ -366,11 +367,11 @@ def plot_history(history, col=3, single_figsize=(6, 4), keys=None, start_epoch=1
         plt.legend()
     plt.show()
 
-def compare_histories(old, new, initial_epochs, single_figsize=(8, 4), keys=None, start_epoch=1):
+def compare_histories(old, new, single_figsize=(8, 4), keys=None):
     """
     Compares two model history objects.
     """
-    old, new = old.history, new.history
+    old, new, old_epochs, new_epochs = old.history, new.history, old.epochs, new.epochs
     all_keys = old.keys()
     
     if not empty(keys):
@@ -383,7 +384,9 @@ def compare_histories(old, new, initial_epochs, single_figsize=(8, 4), keys=None
     true_plus_val_keys = true_keys + ['val_' + i for i in true_keys if 'val_' + i in all_keys]
     plot_key = true_keys + list(set(all_keys) - set(true_plus_val_keys))
 
-    total_epochs = range(start_epoch, len(old[plot_key[0]]) + len(new[plot_key[0]])+start_epoch)
+    start_epoch = old_epochs[0] + 1
+    mid_epoch = len(old_epochs) + start_epoch - 1
+    total_epochs = range(start_epoch, mid_epoch + len(new_epochs) + 1)
 
     row, col, figsize = get_row_col_figsize(len(plot_key), col=1, single_figsize=single_figsize)
     plt.figure(figsize=figsize)
@@ -393,7 +396,7 @@ def compare_histories(old, new, initial_epochs, single_figsize=(8, 4), keys=None
         plt.plot(total_epochs, old[key] + new[key], label=key)
         if 'val_' + key in all_keys:
             plt.plot(total_epochs, old['val_' + key] + new['val_' + key], label='val_' + key)
-        plt.plot([initial_epochs, initial_epochs], plt.ylim())
+        plt.plot([mid_epoch, mid_epoch], plt.ylim())
         plt.xlabel('epoch')
         plt.legend()
     plt.show()
