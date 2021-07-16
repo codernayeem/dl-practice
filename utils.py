@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import cv2
 import os
-import shutil
 import math
 import requests
 import zipfile
@@ -13,8 +12,22 @@ import datetime
 from pathlib import Path
 from random import randint, choices
 from os.path import join, isdir, isfile
+from distutils import dir_util
+from shutil import copy
 from sklearn.metrics import confusion_matrix
 
+
+def create_dir(path):
+    p = Path(str(path))
+    if not p.exists():
+        p.mkdir()
+
+def copytree(src, dst, create_dst=True, verbose=1):
+    if create_dst:
+        create_dir(dst)
+    res = dir_util.copy_tree(src, dst)
+    if verbose:
+        return res
 
 def get_dirs(path):
     return [name for name in os.listdir(path) if isdir(join(path, name))]
@@ -451,11 +464,11 @@ def create_train_val_test(root_data_dir, val_ratio=0.1, test_ratio=0, output_dir
             ])
         # Copy-pasting images
         for name in train_FileNames:
-            shutil.copy(join(src, name), join(output_dir, 'train', class_name, name))
+            copy(join(src, name), join(output_dir, 'train', class_name, name))
         for name in val_FileNames:
-            shutil.copy(join(src, name), join(output_dir, 'val', class_name, name))
+            copy(join(src, name), join(output_dir, 'val', class_name, name))
         for name in test_FileNames:
-            shutil.copy(join(src, name), join(output_dir, 'test', class_name, name))
+            copy(join(src, name), join(output_dir, 'test', class_name, name))
 
 def plot_confusion_matrix(y_test, y_pred, class_names, figsize=(10, 7), fontsize=14, xticks_rotation=45, title=None):
     df_cm = pd.DataFrame(confusion_matrix(y_test, y_pred), index=class_names, columns=class_names)
