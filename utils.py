@@ -15,8 +15,6 @@ from random import randint, choices
 from os.path import join, isdir, isfile
 from sklearn.metrics import confusion_matrix
 
-from tensorflow.keras.callbacks import TensorBoard
-
 
 def get_dirs(path):
     return [name for name in os.listdir(path) if isdir(join(path, name))]
@@ -473,6 +471,8 @@ def create_tensorboard_callback(dir_name, experiment_name):
         dir_name: target directory to store TensorBoard log files
         experiment_name: name of experiment directory (e.g. efficientnet_model_1)
     """
+    from tensorflow.keras.callbacks import TensorBoard
+
     log_dir = join(dir_name, experiment_name, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
     print(f"Saving TensorBoard log files to: {log_dir}")
     return TensorBoard(log_dir=log_dir)
