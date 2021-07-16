@@ -15,7 +15,7 @@ from random import randint, choices
 from os.path import join, isdir, isfile
 from sklearn.metrics import confusion_matrix
 
-from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
+from tensorflow.keras.callbacks import TensorBoard
 
 
 def get_dirs(path):
@@ -476,6 +476,3 @@ def create_tensorboard_callback(dir_name, experiment_name):
     log_dir = join(dir_name, experiment_name, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
     print(f"Saving TensorBoard log files to: {log_dir}")
     return TensorBoard(log_dir=log_dir)
-
-def create_modelcheckpoint_callback(checkpoint_path, **args):
-    return ModelCheckpoint(filepath=checkpoint_path, **args)
