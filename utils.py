@@ -372,12 +372,12 @@ def compare_histories(old, new, single_figsize=(8, 4), keys=None):
     Compares two model history objects.
     """
     old, new, old_epochs, new_epochs = old.history, new.history, old.epochs, new.epochs
-    all_keys = old.keys()
+    all_keys = list(set(old.keys()) & set(new.keys())) # get all common keys
     
     if not empty(keys):
         for key in keys:
             if key not in all_keys:
-                raise ValueError(f'"{key}" not found in the history keys')
+                raise ValueError(f'"{key}" not found in the histories common keys')
         all_keys = keys
     
     true_keys = [i for i in all_keys if not i.startswith('val_')]
