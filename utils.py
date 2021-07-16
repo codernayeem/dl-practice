@@ -232,7 +232,7 @@ def plot_images(imgs, labels=None, class_names=None, col=5, label_mode='int', si
         img = np.array(img)
         img_shape = img.shape
         if rescale:
-            img = img * rescale
+            img = img.astype(np.float32) * rescale
         if IMAGE_SHAPE:
             img = cv2.resize(img, IMAGE_SHAPE)
         
@@ -302,7 +302,7 @@ def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', y_true_mo
     for i, img in enumerate(imgs):
         img = np.array(img)
         if rescale:
-            img = img * rescale
+            img = img.astype(np.float32) * rescale
         if IMAGE_SHAPE:
             img = cv2.resize(img, IMAGE_SHAPE)
         
