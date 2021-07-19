@@ -121,6 +121,7 @@ def load_images_genarator(file_paths, image_size=None):
         yield load_image(file_path, image_size)
 
 def download_image(url, download_path='', return_mode='img', image_shape=None):
+    ''' return_mode : ['img', 'path', 'name', None] '''
     if return_mode not in ['img', 'path', 'name', None]:
         raise ValueError("return_mode should be one of ['img', 'path', 'name', None]")
 
@@ -137,7 +138,7 @@ def download_image(url, download_path='', return_mode='img', image_shape=None):
         fl.write(res.content)
 
     if return_mode == 'img':
-        return load_images(path, image_shape)
+        return load_image(path, image_shape)
     elif return_mode == 'name':
         return fl_name
     elif return_mode == 'path':
@@ -146,31 +147,19 @@ def download_image(url, download_path='', return_mode='img', image_shape=None):
         return None
 
 def download_images(urls, download_path='', return_mode='img', image_shape=None):
-    '''
-    Parameters:
-        url : just a url or list of urls
-        download_path : path for downloaded img
-        return_mode : ['img', 'path', 'name', None]
-    '''
-
+    ''' return_mode : ['img', 'path', 'name', None] '''
     r = []
     for url in urls:
-        res = download_images(url, download_path, return_mode, image_shape)
+        res = download_image(url, download_path, return_mode, image_shape)
         if return_mode:
             r.append(res)
-
     if return_mode:
         return np.array(r) if return_mode == 'img' else r
 
 def download_images_genarator(urls, download_path='', return_mode='img', image_shape=None):
-    '''
-    Parameters:
-        url : just a url or list of urls
-        download_path : path for downloaded img
-        return_mode : ['img', 'path', 'name', None]
-    '''
+    ''' return_mode : ['img', 'path', 'name', None] '''
     for url in urls:
-        yield download_images(url, download_path, return_mode, image_shape)
+        yield download_image(url, download_path, return_mode, image_shape)
 
 def get_pred_percent(preds, percent_round=2):
     percents = []
