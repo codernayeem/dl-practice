@@ -306,7 +306,7 @@ def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', class_nam
         new_title_dict['color'] = color
         
         plt.subplot(row, col, i+1)
-        __plot_an_image(img, title, rescale, IMAGE_SHAPE, show_boundary, title_dict, plt_dict)
+        __plot_an_image(img, title, rescale, IMAGE_SHAPE, show_boundary, new_title_dict, plt_dict)
 
     if tight:
         plt.tight_layout()
