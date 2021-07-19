@@ -197,12 +197,16 @@ def labels_fixer(labels, var_name='labels'):
         return labels
     raise ValueError(f"'{var_name}' should be 1D (int mode) or 2D (categorical mode). Found {ndim}D")
 
-def pred_fixer(pred, pred_mode, percent_decimal=2):
-    if pred_mode == 'softmax':
-        return get_pred_percent(pred, percent_decimal)
-    elif pred_mode == 'sigmoid':
-        return get_pred_percent_sigmoid(pred, percent_decimal)
-    return pred, None
+def pred_fixer(pred, percent_decimal=2, var_name='y_pred'):
+    ndim = pred.ndim
+    if ndim == 1:              # int mode
+        return pred, None, False
+    elif ndim == 2:
+        if pred.shape[1] == 1: # sigmoid mode
+            return (*get_pred_percent_sigmoid(pred, percent_decimal), True)
+        else:                  # softmax mode
+            return (*get_pred_percent(pred, percent_decimal), True)
+    raise ValueError(f"'{var_name}' should be 1D (int) or 2D (softmax/sigmoid). Found {ndim}D")
 
 def __plot_an_image(img, title=None, rescale=None, image_shape=None, boundary=False, title_dict=dict(), plt_dict=dict()):
     if rescale:
@@ -276,17 +280,11 @@ def plot_images(imgs, labels=None, as_tuple=False, class_names=None, col=5, sing
 def plot_image(img, label=None, class_names=None, figsize=(6, 6), show_shape=False, from_link=False, from_dir=False, rescale=None, IMAGE_SHAPE=None, show_boundary=False, tight=False, save=None, title_dict=dict(), plt_dict=dict()):
     plot_images(np.expand_dims(img, 0), labels=[label] if label else None, class_names=class_names, col=1, single_figsize=figsize, show_shape=show_shape, from_link=from_link, from_dir=from_dir, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary, tight=tight, save=save, title_dict=title_dict, plt_dict=plt_dict)
 
-def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', class_names=None, col=5, single_figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), tight=False, save=None, title_dict=dict(), plt_dict=dict()):
-    '''
-    y_pred_mode : ['softmax', 'sigmoid', 'int']
-    '''
-    if y_pred_mode not in ['softmax', 'sigmoid', 'int']:
-        raise ValueError("y_pred_mode should be in ['softmax', 'sigmoid', 'int']")
-
+def plot_pred_images(imgs, y_pred, y_true=None, class_names=None, col=5, single_figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), tight=False, save=None, title_dict=dict(), plt_dict=dict()):
     has_label, has_class_names = not empty(y_true), not empty(class_names)
 
     imgs = np.array(list(imgs))
-    y_pred, percents = pred_fixer(np.array(list(y_pred)), pred_mode=y_pred_mode, percent_decimal=percent_decimal)
+    y_pred, percents, has_percents = pred_fixer(np.array(list(y_pred)), percent_decimal=percent_decimal)
     if has_label:
         y_true = labels_fixer(np.array(list(y_true)), var_name='y_true')
     
@@ -295,7 +293,7 @@ def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', class_nam
 
     for i, img in enumerate(imgs):
         title = ''
-        if y_pred_mode != 'int' and show_percent: # we have percents
+        if has_percents and show_percent: # we have percents
             title += f"{percents[i]}% "
         title += f"{class_names[y_pred[i]]}" if has_class_names else f"{y_pred[i]}"
         color = title_dict.get('color', 'black')
@@ -314,8 +312,8 @@ def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', class_nam
         plt.savefig(save)
     plt.show()
 
-def plot_pred_image(img, y_pred, y_true=None, y_pred_mode='softmax', class_names=None, figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), tight=False, save=None, title_dict=dict(), plt_dict=dict()):
-    plot_pred_images(np.expand_dims(img, 0), y_pred=np.expand_dims(y_pred, 0), y_true=None if empty(y_true) else np.expand_dims(y_true, 0), y_pred_mode=y_pred_mode, class_names=class_names, col=1, single_figsize=figsize, show_percent=show_percent, percent_decimal=percent_decimal, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary, title_color=title_color, tight=tight, save=save, title_dict=title_dict, plt_dict=plt_dict)
+def plot_pred_image(img, y_pred, y_true=None, class_names=None, figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), tight=False, save=None, title_dict=dict(), plt_dict=dict()):
+    plot_pred_images(np.expand_dims(img, 0), y_pred=np.expand_dims(y_pred, 0), y_true=None if empty(y_true) else np.expand_dims(y_true, 0), class_names=class_names, col=1, single_figsize=figsize, show_percent=show_percent, percent_decimal=percent_decimal, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary, title_color=title_color, tight=tight, save=save, title_dict=title_dict, plt_dict=plt_dict)
 
 def plot_history(history, col=3, single_figsize=(6, 4), keys=None, fixed_xlim=False):
     epochs = history.epoch
