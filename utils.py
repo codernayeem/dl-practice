@@ -218,7 +218,7 @@ def __plot_an_image(img, title=None, rescale=None, image_shape=None, boundary=Fa
     if title:
         plt.title(title, **title_dict)
 
-def plot_images(imgs, labels=None, as_tuple=False, class_names=None, col=5, single_figsize=(4, 4), show_shape=False, from_link=False, from_dir=False, rescale=None, IMAGE_SHAPE=None, show_boundary=False, show=True, save=None, title_dict=dict(), plt_dict=dict()):
+def plot_images(imgs, labels=None, as_tuple=False, class_names=None, col=5, single_figsize=(4, 4), show_shape=False, from_link=False, from_dir=False, rescale=None, IMAGE_SHAPE=None, show_boundary=False, save=None, title_dict=dict(), plt_dict=dict()):
     '''
     Plotting images using matplolib
 
@@ -236,7 +236,6 @@ def plot_images(imgs, labels=None, as_tuple=False, class_names=None, col=5, sing
         IMAGE_SHAPE : reshapimg images
         show_boundary : show axis without ticks
         title_dict : keyword aurguments goes to plt.title()
-        show : show figure -> plt.show()
         save : saving figure -> plt.savefig(save)
         plt_dict : keyword aurguments goes to plt.imshow()
     '''
@@ -267,15 +266,15 @@ def plot_images(imgs, labels=None, as_tuple=False, class_names=None, col=5, sing
         plt.subplot(row, col, c+1)
         __plot_an_image(img, title, rescale, IMAGE_SHAPE, show_boundary, title_dict, plt_dict)
 
-    if show:
-        plt.show()
+    plt.tight_layout()
     if save:
         plt.savefig(save)
+    plt.show()
 
-def plot_image(img, label=None, class_names=None, figsize=(6, 6), show_shape=False, from_link=False, from_dir=False, rescale=None, IMAGE_SHAPE=None, show_boundary=False, show=True, save=None, title_dict=dict(), plt_dict=dict()):
-    plot_images(np.expand_dims(img, 0), labels=[label] if label else None, class_names=class_names, col=1, single_figsize=figsize, show_shape=show_shape, from_link=from_link, from_dir=from_dir, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary, show=show, save=save, title_dict=title_dict, plt_dict=plt_dict)
+def plot_image(img, label=None, class_names=None, figsize=(6, 6), show_shape=False, from_link=False, from_dir=False, rescale=None, IMAGE_SHAPE=None, show_boundary=False, save=None, title_dict=dict(), plt_dict=dict()):
+    plot_images(np.expand_dims(img, 0), labels=[label] if label else None, class_names=class_names, col=1, single_figsize=figsize, show_shape=show_shape, from_link=from_link, from_dir=from_dir, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary, save=save, title_dict=title_dict, plt_dict=plt_dict)
 
-def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', class_names=None, col=5, single_figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), show=True, save=None, title_dict=dict(), plt_dict=dict()):
+def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', class_names=None, col=5, single_figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), save=None, title_dict=dict(), plt_dict=dict()):
     '''
     y_pred_mode : ['softmax', 'sigmoid', 'int']
     '''
@@ -304,13 +303,13 @@ def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', class_nam
         plt.subplot(row, col, i+1)
         __plot_an_image(img, title, rescale, IMAGE_SHAPE, show_boundary, title_dict, plt_dict)
 
-    if show:
-        plt.show()
+    plt.tight_layout()
     if save:
         plt.savefig(save)
+    plt.show()
 
-def plot_pred_image(img, y_pred, y_true=None, y_pred_mode='softmax', class_names=None, figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), show=True, save=None, title_dict=dict(), plt_dict=dict()):
-    plot_pred_images(np.expand_dims(img, 0), y_pred=np.expand_dims(y_pred, 0), y_true=None if empty(y_true) else np.expand_dims(y_true, 0), y_pred_mode=y_pred_mode, class_names=class_names, col=1, single_figsize=figsize, show_percent=show_percent, percent_decimal=percent_decimal, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary, title_color=title_color, show=show, save=save, title_dict=title_dict, plt_dict=plt_dict)
+def plot_pred_image(img, y_pred, y_true=None, y_pred_mode='softmax', class_names=None, figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), save=None, title_dict=dict(), plt_dict=dict()):
+    plot_pred_images(np.expand_dims(img, 0), y_pred=np.expand_dims(y_pred, 0), y_true=None if empty(y_true) else np.expand_dims(y_true, 0), y_pred_mode=y_pred_mode, class_names=class_names, col=1, single_figsize=figsize, show_percent=show_percent, percent_decimal=percent_decimal, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary, title_color=title_color, save=save, title_dict=title_dict, plt_dict=plt_dict)
 
 def plot_history(history, col=3, single_figsize=(6, 4), keys=None, fixed_xlim=False):
     epochs = history.epoch
