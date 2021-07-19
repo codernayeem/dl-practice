@@ -47,7 +47,7 @@ def mount_gdrive(path='/content/drive', force_remount=False):
     drive.mount(path, force_remount=force_remount)
     return path
 
-def get_random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, rand_classes=None, label_mode='class', label_class_names=None):
+def random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, rand_classes=None, label_mode='class', label_class_names=None):
     '''
     label_mode : 'class', 'int', None
     label_class_names : used for label_mode : 'int' (To get the index)
@@ -90,6 +90,10 @@ def get_random_imgs(data_dir, rand_imgs=5, equal_img_per_class=None, rand_classe
 
     return [rand, labels] if label_mode else rand
 
+def random_img(data_dir, rand_classes=None, label_mode='class', label_class_names=None):
+    res = random_imgs(data_dir, rand_imgs=1, rand_classes=rand_classes, label_mode=label_mode, label_class_names=label_class_names)
+    return res[0][0], res[1][0] if label_mode else res[0]
+
 def print_class_files(data_dir, print_full=False):
     data_dir = str(data_dir)
     print(f'Directory : {data_dir}')
@@ -99,36 +103,36 @@ def print_class_files(data_dir, print_full=False):
             c = len([fl for fl in os.listdir(class_dir) if isfile(join(class_dir, fl))])
             print(f'  - Found {c} {class_dir if print_full else i}')
 
-def __image_to_numpy(file_dir, image_size):
-    img =  cv2.cvtColor(cv2.imread(file_dir), cv2.COLOR_BGR2RGB)
-    return cv2.resize(img, image_size) if image_size else img
+def load_image(file_path, image_shape=None):
+    file_path = str(file_path)
+    if not isfile(file_path):
+        raise ValueError(f'File not found : "{file_path}"')
+    img =  cv2.cvtColor(cv2.imread(file_path), cv2.COLOR_BGR2RGB)
+    return cv2.resize(img, image_shape) if image_shape else img
 
-def load_images(file_dir, image_size=None):
-    single = type(file_dir) == str
-    if single:
-        file_dir = [file_dir]
+def load_images(file_paths, image_size=None):
+    res = []
+    for file_path in file_paths:
+        res.append(load_image(file_path, image_size))
+    return np.array(res)
 
-    r = []
-    for fl in file_dir:
-        r.append(__image_to_numpy(str(fl), image_size))
-    return r[0] if single else np.array(r)
+def load_images_genarator(file_paths, image_size=None):
+    for file_path in file_paths:
+        yield load_image(file_path, image_size)
 
-def load_images_genarator(file_dir, image_size=None):
-    if type(file_dir) == str:
-        file_dir = [file_dir]
-    
-    for fl in file_dir:
-        yield __image_to_numpy(str(fl), image_size)
+def download_image(url, download_path='', return_mode='img', image_shape=None):
+    if return_mode not in ['img', 'path', 'name', None]:
+        raise ValueError("return_mode should be one of ['img', 'path', 'name', None]")
 
-def __download_images(url, download_path, return_mode, image_shape):
+    url = str(url)
     fl_name = url.split('/')[-1].split('?')[0]
     res = requests.get(url)
     if res.status_code != 200:
-        raise Exception(f'"{url}" returned status_code : {res.status_code}')
+        raise Exception(f'"{url}" -> returned status_code : {res.status_code}')
     if res.headers['Content-Type'] == 'text/html':
-        raise Exception(f'"{url}" returned text/html; not an image')
+        raise Exception(f'"{url}" -> returned text/html; not an image')
 
-    path = join(download_path, fl_name) if download_path else fl_name
+    path = join(download_path, fl_name)
     with open(path, 'wb') as fl:
         fl.write(res.content)
 
@@ -141,7 +145,7 @@ def __download_images(url, download_path, return_mode, image_shape):
     else:
         return None
 
-def download_images(url, download_path=None, return_mode='img', image_shape=None):
+def download_images(urls, download_path='', return_mode='img', image_shape=None):
     '''
     Parameters:
         url : just a url or list of urls
@@ -149,37 +153,24 @@ def download_images(url, download_path=None, return_mode='img', image_shape=None
         return_mode : ['img', 'path', 'name', None]
     '''
 
-    if return_mode not in ['img', 'path', 'name', None]:
-        raise ValueError("return_mode should be one of ['img', 'path', 'name', None]")
-
-    single = type(url) == str
-    urls = [url] if single else url
-
     r = []
     for url in urls:
-        res = __download_images(str(url), download_path, return_mode, image_shape)
+        res = download_images(url, download_path, return_mode, image_shape)
         if return_mode:
             r.append(res)
 
     if return_mode:
-        return r[0] if single else (np.array(r) if return_mode == 'img' else r)
+        return np.array(r) if return_mode == 'img' else r
 
-def download_images_genarator(url, download_path=None, return_mode='img', image_shape=None):
+def download_images_genarator(urls, download_path='', return_mode='img', image_shape=None):
     '''
     Parameters:
         url : just a url or list of urls
         download_path : path for downloaded img
         return_mode : ['img', 'path', 'name', None]
     '''
-
-    if return_mode not in ['img', 'path', 'name', None]:
-        raise ValueError("return_mode should be one of ['img', 'path', 'name', None]")
-
-    single = type(url) == str
-    urls = [url] if single else url
-
     for url in urls:
-        yield __download_images(str(url), download_path, return_mode, image_shape)
+        yield download_images(url, download_path, return_mode, image_shape)
 
 def get_pred_percent(preds, percent_round=2):
     percents = []
@@ -209,16 +200,45 @@ def get_row_col_figsize(total_item, col, single_figsize):
     figsize = (single_figsize[0]*col, single_figsize[1]*row)
     return row, col, figsize
 
-def plot_images(imgs, labels=None, class_names=None, col=5, label_mode='int', single_figsize=(4, 4), show_shape=False, from_link=False, from_dir=False, rescale=None, IMAGE_SHAPE=None, show_boundary=False, **keyargs):
+def labels_fixer(labels, var_name='labels'):
+    ndim = labels.ndim
+    if ndim == 2: # categorical
+        return np.argmax(labels, axis=1)
+    elif ndim == 1: # int
+        return labels
+    raise ValueError(f"'{var_name}' should be 1D (int mode) or 2D (categorical mode). Found {ndim}D")
+
+def pred_fixer(pred, pred_mode, percent_decimal=2):
+    if pred_mode == 'softmax':
+        return get_pred_percent(pred, percent_decimal)
+    elif pred_mode == 'sigmoid':
+        return get_pred_percent_sigmoid(pred, percent_decimal)
+    return pred, None
+
+def __plot_an_image(img, title=None, rescale=None, image_shape=None, boundary=False, title_dict=dict(), plt_dict=dict()):
+    if rescale:
+        img = img.astype(np.float32) * rescale
+    if image_shape:
+        img = cv2.resize(img, image_shape)
+    plt.imshow(img, **plt_dict)
+    if boundary:
+        plt.xticks([])
+        plt.yticks([])
+    else:
+        plt.axis(False)
+    if title:
+        plt.title(title, **title_dict)
+
+def plot_images(imgs, labels=None, as_tuple=False, class_names=None, col=5, single_figsize=(4, 4), show_shape=False, from_link=False, from_dir=False, rescale=None, IMAGE_SHAPE=None, show_boundary=False, show=True, save=None, title_dict=dict(), plt_dict=dict()):
     '''
     Plotting images using matplolib
 
     Parameters:
         imgs : array of images
         labels : labels for the images (Optional)
+        as_tuple : if 'imgs' are tuples. e.g. [(img, label), (img, label), .....]
         class_names : All class_names for the images (default : None)
         col  : column number (default : 5)
-        label_mode : 'int' or 'categorical'
         single_figsize : plot size for each img
         show_shape : define if the shape will be shown in title (default : False)
         from_link : if the imgs are links of images
@@ -226,130 +246,82 @@ def plot_images(imgs, labels=None, class_names=None, col=5, label_mode='int', si
         rescale : rescale images (e.g. 1/255)
         IMAGE_SHAPE : reshapimg images
         show_boundary : show axis without ticks
-        **keyargs : extra keyword aurguments goes to pl.imshow()
+        title_dict : keyword aurguments goes to plt.title()
+        show : show figure -> plt.show()
+        save : saving figure -> plt.savefig(save)
+        plt_dict : keyword aurguments goes to plt.imshow()
     '''
-    if not empty(labels):
-        if label_mode == 'categorical':
-            labels = np.argmax(labels, axis=1)
-        elif label_mode != 'int':
-            raise ValueError('label_mode shoud be "int" or "categorical"')
+    has_label, has_class_names = not empty(labels), not empty(class_names)
+
+    imgs = np.array(list(imgs))
+    if (from_dir or from_link) and imgs.ndim != 1:
+        raise ValueError(f"'{'from_dir' if from_dir else 'from_link'}' needs 'imgs' in 1D. Found {imgs.ndim}")
+    if has_label:
+        labels = labels_fixer(np.array(list(labels)))
+
     row, col, figsize = get_row_col_figsize(len(imgs), col, single_figsize)
     plt.figure(figsize=figsize)
 
-    if from_dir:
-        imgs = load_images_genarator(imgs)
-    elif from_link:
-        imgs = download_images_genarator(imgs)
-
-    for c, img in enumerate(imgs):
-        img = np.array(img)
-        img_shape = img.shape
-        if rescale:
-            img = img.astype(np.float32) * rescale
-        if IMAGE_SHAPE:
-            img = cv2.resize(img, IMAGE_SHAPE)
+    for c, img in enumerate(zip(imgs, labels) if not as_tuple and has_label else imgs):
+        title = ''
+        if as_tuple or has_label:
+            img, label = img
+            title = f'{class_names[label]}' if has_class_names else f'{label}'
+        
+        if from_dir:
+            img = load_image(img)
+        elif from_link:
+            img = download_image(img)
+        if show_shape:
+            title += f' {img.shape}'
         
         plt.subplot(row, col, c+1)
-        plt.imshow(img, **keyargs)
-        if show_boundary:
-            plt.xticks([])
-            plt.yticks([])
-        else:
-            plt.axis(False)
-        title = ''
-        if not empty(labels): 
-            if not empty(class_names):
-                title = f'{class_names[labels[c]]}'
-            else:
-                title = f'{labels[c]}'
-        if show_shape:
-            title += f' {img_shape}'
-        if title:
-            plt.title(title)
-    plt.show()
+        __plot_an_image(img, title, rescale, IMAGE_SHAPE, show_boundary, title_dict, plt_dict)
 
-def plot_image(img, label=None, class_names=None, label_mode='int', figsize=(6, 6), show_shape=False, from_link=False, from_dir=False, rescale=None, IMAGE_SHAPE=None, show_boundary=False, **keyargs):
-    '''
-    Plotting an image using matplolib
+    if show:
+        plt.show()
+    if save:
+        plt.savefig(save)
 
-    Parameters:
-    ----------
-        img : the image in numbers
-        label : label for the image (Optional)
-        class_names : All class_names for the images (default : None)
-        label_mode : 'int' or 'categorical'
-        figsize : Figure size for the image (default : (6, 6))
-        show_shape : define if the shape will be shown in title (default : False)
-        from_link : if the img is a link of image
-        from_dir : if the img is a path of image
-        rescale : rescale image (e.g. 1/255)
-        IMAGE_SHAPE : reshapimg image
-        show_boundary : show axis without ticks
-        label_mode : 'int' or 'categorical'
-        **keyargs : extra keyword aurguments goes to pl.imshow()
-    '''
-    plot_images(np.expand_dims(img, 0), labels=[label] if label else None, class_names=class_names, col=1, label_mode=label_mode, single_figsize=figsize, show_shape=show_shape, from_link=from_link, from_dir=from_dir, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary, **keyargs)
+def plot_image(img, label=None, class_names=None, figsize=(6, 6), show_shape=False, from_link=False, from_dir=False, rescale=None, IMAGE_SHAPE=None, show_boundary=False, show=True, save=None, title_dict=dict(), plt_dict=dict()):
+    plot_images(np.expand_dims(img, 0), labels=[label] if label else None, class_names=class_names, col=1, single_figsize=figsize, show_shape=show_shape, from_link=from_link, from_dir=from_dir, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary, show=show, save=save, title_dict=title_dict, plt_dict=plt_dict)
 
-def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', y_true_mode='int', class_names=None, col=5, single_figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), **keyargs):
+def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', class_names=None, col=5, single_figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), show=True, save=None, title_dict=dict(), plt_dict=dict()):
     '''
     y_pred_mode : ['softmax', 'sigmoid', 'int']
-    y_true_mode : ['categorical', 'int']
     '''
-
-    y_pred = np.array(y_pred)
-    if y_pred_mode == 'softmax':
-        y_pred, percents = get_pred_percent(y_pred, percent_decimal)
-    elif y_pred_mode == 'sigmoid':
-        y_pred, percents = get_pred_percent_sigmoid(y_pred, percent_decimal)
-    elif y_pred_mode != 'int':
+    if y_pred_mode not in ['softmax', 'sigmoid', 'int']:
         raise ValueError("y_pred_mode should be in ['softmax', 'sigmoid', 'int']")
 
-    if not empty(y_true):
-        if y_true_mode == 'categorical':
-            y_true = np.argmax(y_true, axis=1)
-        elif y_true_mode != 'int':
-            raise ValueError('y_true_mode shoud be "int" or "categorical"')
+    has_label, has_class_names = not empty(y_true), not empty(class_names)
+
+    imgs = np.array(list(imgs))
+    y_pred, percents = pred_fixer(np.array(list(y_pred)), pred_mode=y_pred_mode, percent_decimal=percent_decimal)
+    if has_label:
+        y_true = labels_fixer(np.array(list(y_true)), var_name='y_true')
     
     row, col, figsize = get_row_col_figsize(len(imgs), col, single_figsize)
     plt.figure(figsize=figsize)
+
     for i, img in enumerate(imgs):
-        img = np.array(img)
-        if rescale:
-            img = img.astype(np.float32) * rescale
-        if IMAGE_SHAPE:
-            img = cv2.resize(img, IMAGE_SHAPE)
-        
-        plt.subplot(row, col, i+1)
-        plt.imshow(img, **keyargs)
-        if show_boundary:
-            plt.xticks([])
-            plt.yticks([])
-        else:
-            plt.axis(False)
-        
         title = ''
         if y_pred_mode != 'int' and show_percent: # we have percents
             title += f"{percents[i]}% "
-
-        if class_names:
-            title += f"{class_names[y_pred[i]]}"
-        else:
-            title += f"{y_pred[i]}"
-
-        color = 'black'
-        if not empty(y_true):
-            if class_names:
-                title += f" ({class_names[y_true[i]]})"
-            else:
-                title += f" ({y_true[i]})"
-            correct_pred = y_true[i] == y_pred[i]
-            color = (title_color[0] if correct_pred else title_color[1]) if title_color else None
+        title += f"{class_names[y_pred[i]]}" if has_class_names else f"{y_pred[i]}"
+        if has_label:
+            title += f" ({class_names[y_true[i]]})" if has_class_names else f" ({y_true[i]})"
+            title_dict['color'] = (title_color[0] if y_true[i] == y_pred[i] else title_color[1]) if title_color else 'black'
         
-        plt.title(title, color=color)
-    plt.show()
+        plt.subplot(row, col, i+1)
+        __plot_an_image(img, title, rescale, IMAGE_SHAPE, show_boundary, title_dict, plt_dict)
 
-def plot_pred_image(img, y_pred, y_true=None, y_pred_mode='softmax', y_true_mode='int', class_names=None, figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), **keyargs):
-    plot_pred_images(np.expand_dims(img, 0), y_pred=np.expand_dims(y_pred, 0), y_true=None if empty(y_true) else np.expand_dims(y_true, 0), y_pred_mode=y_pred_mode, y_true_mode=y_true_mode, class_names=class_names, col=1, single_figsize=figsize, show_percent=show_percent, percent_decimal=percent_decimal, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary)
+    if show:
+        plt.show()
+    if save:
+        plt.savefig(save)
+
+def plot_pred_image(img, y_pred, y_true=None, y_pred_mode='softmax', class_names=None, figsize=(4, 4), show_percent=True, percent_decimal=2, rescale=None, IMAGE_SHAPE=None, show_boundary=False, title_color=('green', 'red'), show=True, save=None, title_dict=dict(), plt_dict=dict()):
+    plot_pred_images(np.expand_dims(img, 0), y_pred=np.expand_dims(y_pred, 0), y_true=None if empty(y_true) else np.expand_dims(y_true, 0), y_pred_mode=y_pred_mode, class_names=class_names, col=1, single_figsize=figsize, show_percent=show_percent, percent_decimal=percent_decimal, rescale=rescale, IMAGE_SHAPE=IMAGE_SHAPE, show_boundary=show_boundary, title_color=title_color, show=show, save=save, title_dict=title_dict, plt_dict=plt_dict)
 
 def plot_history(history, col=3, single_figsize=(6, 4), keys=None, fixed_xlim=False):
     epochs = history.epoch
