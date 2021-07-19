@@ -296,9 +296,12 @@ def plot_pred_images(imgs, y_pred, y_true=None, y_pred_mode='softmax', class_nam
         if y_pred_mode != 'int' and show_percent: # we have percents
             title += f"{percents[i]}% "
         title += f"{class_names[y_pred[i]]}" if has_class_names else f"{y_pred[i]}"
+        color = title_dict.get('color', 'black')
         if has_label:
             title += f" ({class_names[y_true[i]]})" if has_class_names else f" ({y_true[i]})"
-            title_dict['color'] = (title_color[0] if y_true[i] == y_pred[i] else title_color[1]) if title_color else 'black'
+            color = (title_color[0] if y_true[i] == y_pred[i] else title_color[1]) if title_color else color
+        new_title_dict = title_dict.copy()
+        new_title_dict['color'] = color
         
         plt.subplot(row, col, i+1)
         __plot_an_image(img, title, rescale, IMAGE_SHAPE, show_boundary, title_dict, plt_dict)
