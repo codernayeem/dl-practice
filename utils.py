@@ -110,15 +110,15 @@ def load_image(file_path, image_shape=None):
     img =  cv2.cvtColor(cv2.imread(file_path), cv2.COLOR_BGR2RGB)
     return cv2.resize(img, image_shape) if image_shape else img
 
-def load_images(file_paths, image_size=None):
+def load_images(file_paths, image_shape=None):
     res = []
     for file_path in file_paths:
-        res.append(load_image(file_path, image_size))
+        res.append(load_image(file_path, image_shape))
     return np.array(res)
 
-def load_images_genarator(file_paths, image_size=None):
+def load_images_genarator(file_paths, image_shape=None):
     for file_path in file_paths:
-        yield load_image(file_path, image_size)
+        yield load_image(file_path, image_shape)
 
 def download_image(url, download_path='', return_mode='img', image_shape=None):
     ''' return_mode : ['img', 'path', 'name', None] '''
