@@ -11,7 +11,10 @@ __pycache__/
 .ipynb_checkpoints/
 
 # datasets
-datasets/
+/datasets
 
 # Saved Model
-saved/
+/saved
+
+# temp files
+/temp
