@@ -1,7 +1,4 @@
 from pathlib import Path
-import json
-import pandas as pd
-
 
 EXECUTION_LINE_START = '      "execution_count":'
 
